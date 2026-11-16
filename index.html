@@ -13,33 +13,112 @@
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0 auto;max-width:480px;background:#000;color:#fff;
-  padding:calc(env(safe-area-inset-top) + 58px) 12px 20px;
-  font-family:'Arial Narrow','Helvetica Neue Condensed','Roboto Condensed',sans-serif}
-.disp{font-size:64px;text-align:center;color:#0f0;font-variant-numeric:tabular-nums;line-height:1.15;margin-top:8px}
-.disp-lap{font-size:48px;text-align:center;color:#00c8ff;font-variant-numeric:tabular-nums;line-height:1.1}
-.row-label{font-size:14px;margin:14px 2px 4px}
-input,textarea{width:100%;background:#262626;color:#fff;border:0;border-radius:6px;padding:12px;
-  font-size:14px;font-family:inherit;text-align:center}
-textarea{text-align:left;resize:none}
+  padding:calc(env(safe-area-inset-top) + 70px) 16px 20px;
+  font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif}
+.disp{font-size:72px;text-align:center;color:#fff;font-variant-numeric:tabular-nums;line-height:1.1;margin-top:8px;font-weight:400}
+.disp{font-size:64px;text-align:center;color:#FFFFFF;font-variant-numeric:tabular-nums;line-height:1.15;margin-top:8px}
+.disp-lap{font-size:48px;text-align:center;color:#FFFFFF;font-variant-numeric:tabular-nums;line-height:1.1}
+.row-label{font-size:13px;margin:14px 2px 4px;color:#A6A6A6
+input, textarea {
+  background: #333333; /* Темно-серый, как на референсе */
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 16px;
+  font-family: inherit;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  height: 44px; /* Фиксируем высоту, чтобы совпадала с переключателями */
+}
+textarea {
+  text-align: left;
+  resize: none;
+  height: auto;
+}
 input.err{background:#590d0b}
 .hint{display:none;color:#ff6b6b;font-size:11px;margin-top:2px}
 .suggest{max-height:150px;overflow:auto;border-radius:6px;margin-top:2px}
 .suggest div{background:#262626;padding:10px;text-align:center;border-bottom:1px solid #000}
-.toggles{display:flex;gap:8px}
-.tg{flex:1;padding:12px 6px;background:#082626;color:#fff;border:0;border-radius:6px;font-size:12px;font-family:inherit}
+/* ПЕРЕКЛЮЧАТЕЛИ (Мини-табы) */
+.toggles {
+  display: flex;
+  background: #222; /* Темная подложка, как у верхних табов */
+  border-radius: 999px; /* Форма капсулы */
+  padding: 3px; /* Внутренний отступ */
+  height: 44px; /* Такая же высота, как у полей ввода */
+  box-sizing: border-box;
+}
+.tg {
+  flex: 1;
+  background: #082626; /* Цвет неактивного состояния из ТЗ (8,38,38) */
+  color: #FFFFFF;
+  border: 0;
+  border-radius: 999px; /* Круглые края кнопок внутри */
+  font-size: 12px; /* Размер из ТЗ */
+  font-weight: normal; /* Не жирный */
+  text-align: center;
+  font-family: inherit;
+  transition: 0.2s;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .tg.on{background:#003c61}
 .btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
-.btn{padding:26px 6px;border:0;border-radius:10px;font-size:20px;font-family:inherit}
+.btn{padding:26px 6px;border:0;border-radius:24px;font-size:20px;font-family:inherit}
 #bStart{background:#132914;color:#0f0}
 #bLap{background:#1e2b32;color:#00c8ff}
 #bExport{background:#262626;color:#fff}
 #bStop{background:#2c122a;color:#ff01ed}
-.tabs{position:fixed;top:0;left:0;right:0;max-width:480px;margin:0 auto;display:flex;z-index:10;
-  padding-top:env(safe-area-inset-top)}
-.tab{flex:1;padding:14px;background:#082626;color:#fff;border:0;font-size:16px;font-family:inherit}
-.tab.on.krs{background:#003c61}
-.tab.on.kat{background:#132914}
-#lockBar{display:none;background:#590d0b;color:#fff;text-align:center;padding:8px;border-radius:6px;
+.tabs {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  max-width: 480px; 
+  margin: 10px auto 0; 
+  display: flex;
+  z-index: 10;
+  padding: 4px; 
+  background: #222; /* Темная подложка для формы таблетки */
+  border-radius: 999px; 
+  width: 92%; 
+  box-sizing: border-box;
+  /* Учитываем "чёлку" (safe-area) */
+  margin-top: calc(env(safe-area-inset-top) + 10px);
+}
+
+.tab {
+  flex: 1;
+  padding: 12px;
+  background: #082626; /* Цвет неактивного состояния из ТЗ (8,38,38) */
+  color: #FFFFFF;      /* Белый текст */
+  border: 0;
+  font-size: 16px;     
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-weight: normal; 
+  text-align: center;  
+  transition: 0.2s;    /* Плавная смена цвета */
+  border-radius: 999px; /* Закругление самой кнопки */
+}
+
+/* Активное состояние для КРС (0,60,97) */
+.tab.on.krs { 
+  background: #003c61; 
+}
+
+/* Активное состояние для КЕЙТЕРИНГ (19,41,20) */
+.tab.on.kat { 
+  background: #132914; 
+}
+/* Сетка в 2 колонки */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px; /* Расстояние между колонками */
+}
+  #lockBar{display:none;background:#590d0b;color:#fff;text-align:center;padding:8px;border-radius:6px;
   margin-bottom:8px;font-size:14px}
 #status{text-align:center;color:#8a8a8a;font-size:13px;margin-top:10px;min-height:16px}
 </style>
@@ -67,21 +146,38 @@ window.onerror = function (msg, src, line) {
 </div>
 
 <div id="krsFields">
-  <div class="row-label">Номер входной</div>
-  <input id="entry" inputmode="numeric" maxlength="17" oninput="entryInput()">
-  <div class="row-label">Номер манишки</div>
-  <input id="bib" inputmode="numeric" maxlength="4" oninput="digits(this,4)">
-  <div class="row-label">Тип контура</div>
-  <div class="toggles" data-group="kontur">
-    <button class="tg" data-val="Теплый" onclick="pick(this)">Тёплый</button>
-    <button class="tg" data-val="Холодный" onclick="pick(this)">Холод.</button>
+  <!-- Ряд 1: Номер входной и Номер манишки -->
+  <div class="grid-2">
+    <div>
+      <div class="row-label">Номер входной</div>
+      <input id="entry" inputmode="numeric" maxlength="17" oninput="entryInput()">
+    </div>
+    <div>
+      <div class="row-label">Номер манишки</div>
+      <input id="bib" inputmode="numeric" maxlength="4" oninput="digits(this,4)">
+    </div>
   </div>
-  <div class="row-label">Тип осмотра</div>
-  <div class="toggles" data-group="osmotr">
-    <button class="tg" data-val="Тело" onclick="pick(this)">Тело</button>
-    <button class="tg" data-val="Ручная кладь" onclick="pick(this)">Кладь</button>
+
+  <!-- Ряд 2: Тип контура и Тип осмотра (наши "мини-табы") -->
+  <div class="grid-2" style="margin-top: 14px;">
+    <div>
+      <div class="row-label">Тип контура</div>
+      <div class="toggles" data-group="kontur">
+        <button class="tg" data-val="Теплый" onclick="pick(this)">Тёплый</button>
+        <button class="tg" data-val="Холодный" onclick="pick(this)">Холод.</button>
+      </div>
+    </div>
+    <div>
+      <div class="row-label">Тип осмотра</div>
+      <div class="toggles" data-group="osmotr">
+        <button class="tg" data-val="Тело" onclick="pick(this)">Тело</button>
+        <button class="tg" data-val="Ручная кладь" onclick="pick(this)">Кладь</button>
+      </div>
+    </div>
   </div>
-  <div class="row-label">Примечание</div>
+
+  <!-- Ряд 3: Примечание -->
+  <div class="row-label" style="margin-top: 14px;">Примечание</div>
   <textarea id="noteK" rows="2" maxlength="300"></textarea>
 </div>
 
@@ -116,7 +212,7 @@ window.onerror = function (msg, src, line) {
 <div id="status"></div>
 
 <script>
-var API = https://script.google.com/macros/s/AKfycbxtNHriDRJXNoNlRf3dqHTeI8klmNekkMNd4WOY0AFyvgZf48xeV3lfCyAAZv0aBZiAUA/exec;
+var API = 'https://script.google.com/macros/s/AKfycbxtNHriDRJXNoNlRf3dqHTeI8klmNekkMNd4WOY0AFyvgZf48xeV3lfCyAAZv0aBZiAUA/exec';
 function $(id) { return document.getElementById(id); }
 
 var dict = { locked: false, points: [], operators: {}, inputs: [] };
@@ -125,7 +221,8 @@ var mainRun = false, mainStart = 0, mainFinal = null;
 var lapRun = false, lapStart = 0, lapFinal = null;
 var startLocal = null, lapLocal = null, stopLocal = null;
 var stopClicks = [];
-
+var lastMainText = null, lastLapText = null, lastLapVisible = null;
+  
 function nowStr(d) {
   function p(n) { return String(n).padStart(2, '0'); }
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' '
@@ -139,11 +236,25 @@ function fmt(ms) {
 function status(t) { $('status').textContent = t; }
 
 function setDisplays() {
-  $('main').textContent = mainRun ? fmt(Date.now() - mainStart)
-                        : (mainFinal !== null ? fmt(mainFinal) : '0:00:00');
+  var mainText = mainRun ? fmt(Date.now() - mainStart)
+                         : (mainFinal !== null ? fmt(mainFinal) : '0:00:00');
+  if (mainText !== lastMainText) {
+    $('main').textContent = mainText;
+    lastMainText = mainText;
+  }
+
   var showLap = mode === 'kat' && (lapRun || lapFinal !== null);
-  $('lapWrap').style.display = showLap ? 'block' : 'none';
-  if (showLap) $('lap').textContent = lapRun ? fmt(Date.now() - lapStart) : fmt(lapFinal);
+  if (showLap !== lastLapVisible) {
+    $('lapWrap').style.display = showLap ? 'block' : 'none';
+    lastLapVisible = showLap;
+  }
+  if (showLap) {
+    var lapText = lapRun ? fmt(Date.now() - lapStart) : fmt(lapFinal);
+    if (lapText !== lastLapText) {
+      $('lap').textContent = lapText;
+      lastLapText = lapText;
+    }
+  }
 }
 setInterval(setDisplays, 250);
 
@@ -207,7 +318,7 @@ function pointInput() {
   var q = $('pointList');
   q.innerHTML = '';
   if (!v || !latin) return;
-  var m = dict.points.filter(function (p) { return p.toUpperCase().indexOf(v) !== -1; }).slice(0, 8);
+  var m = (dict.points || []).filter(function (p) { return p.toUpperCase().indexOf(v) !== -1; }).slice(0, 8);
   m.forEach(function (p) {
     var d = document.createElement('div');
     d.textContent = p;
@@ -220,12 +331,24 @@ function pickPoint(p) {
   $('point').classList.remove('err'); $('latinHint').style.display = 'none';
 }
 function pick(el) {
-  var kids = el.parentElement.children;
-  for (var i = 0; i < kids.length; i++) kids[i].classList.remove('on');
+  var group = el.parentElement.getAttribute('data-group');
+  if (!group) {
+    // группа не задана — ведём себя как раньше (для «Чеки»)
+    el.classList.toggle('on');
+    return;
+  }
+  var buttons = document.querySelectorAll('[data-group="' + group + '"] .tg');
+  for (var i = 0; i < buttons.length; i++) buttons[i].classList.remove('on');
   el.classList.add('on');
 }
+
 function sel(g) {
-  var b = document.querySelector('[data-group="' + g + '"] .on');
+  var wrap = document.querySelector('[data-group="' + g + '"]');
+  if (!wrap) {
+    console.warn('sel(): группа "' + g + '" не найдена в разметке');
+    return '';
+  }
+  var b = wrap.querySelector('.on');
   return b ? b.getAttribute('data-val') : '';
 }
 
@@ -240,7 +363,7 @@ function exportRec() {
     var entry = $('entry').value, bib = $('bib').value;
     var kontur = sel('kontur'), osmotr = sel('osmotr');
     if (!entry) return status('Заполните «Номер входной»');
-    if (dict.inputs.indexOf(entry) === -1) return status('Номер «' + entry + '» отсутствует в списке входных');
+    if (!dict.inputs || dict.inputs.indexOf(entry) === -1) return status('Номер «' + entry + '» отсутствует в списке входных');
     if (!bib) return status('Заполните «Номер манишки»');
     if (!kontur) return status('Выберите тип контура');
     if (!osmotr) return status('Выберите тип осмотра');
@@ -250,10 +373,10 @@ function exportRec() {
     var point = $('point').value, kassa = $('kassa').value;
     if (!point) return status('Заполните «Номер точки»');
     if (!/^[A-Z0-9]+$/.test(point)) return status('Используй латиницу!');
-    if (dict.points.indexOf(point) === -1) return status('Точки «' + point + '» нет в списке точек');
+    if (!dict.points || dict.points.indexOf(point) === -1) return status('Точки «' + point + '» нет в списке точек');
     if (!kassa) return status('Заполните «Номер кассы»');
     var hadLap = lapFinal !== null;
-    if (hadLap && !$('staff').value) return status('Заполните «Количество работающих персонала»');
+    if (hadLap && !$('queue').value) return status('Заполните «Человек в очереди»');
     rec = { mode: 'katering', point: point, kassa: kassa,
             kassCount: $('kassCount').value, staff: $('staff').value, queue: $('queue').value,
             print: $('chkPrint').classList.contains('on'),
@@ -287,13 +410,16 @@ function sync() {
         });
     }).catch(function () { rest.push(rec); });
   });
-  chain.then(function () {
-    saveQ(rest);
-    status(rest.length ? 'Не отправлено: ' + rest.length : 'Всё синхронизировано');
-    syncing = false;
+  chain.catch(function () {}).then(function () {
+    try {
+      saveQ(rest);
+      status(rest.length ? 'Не отправлено: ' + rest.length : 'Всё синхронизировано');
+    } finally {
+      syncing = false;
+    }
   });
 }
-
+  
 /* ---------- справочники и блокировка ---------- */
 function loadDict() {
   fetch(API).then(function (r) { return r.json(); }).then(function (j) {
