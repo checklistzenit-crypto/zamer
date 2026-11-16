@@ -3,15 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>Замер</title>
+<link rel="icon" href="icon.png">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.png">
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0 auto;max-width:480px;background:#000;color:#fff;padding:10px 12px 92px;
-     font-family:'Arial Narrow','Helvetica Neue Condensed','Roboto Condensed',sans-serif}
+body{margin:0 auto;max-width:480px;background:#000;color:#fff;
+  padding:calc(env(safe-area-inset-top) + 58px) 12px 20px;
+  font-family:'Arial Narrow','Helvetica Neue Condensed','Roboto Condensed',sans-serif}
 .disp{font-size:64px;text-align:center;color:#0f0;font-variant-numeric:tabular-nums;line-height:1.15;margin-top:8px}
 .disp-lap{font-size:48px;text-align:center;color:#00c8ff;font-variant-numeric:tabular-nums;line-height:1.1}
 .row-label{font-size:14px;margin:14px 2px 4px}
@@ -31,8 +34,8 @@ input.err{background:#590d0b}
 #bLap{background:#1e2b32;color:#00c8ff}
 #bExport{background:#262626;color:#fff}
 #bStop{background:#2c122a;color:#ff01ed}
-.tabs{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;display:flex;
-  padding-bottom:env(safe-area-inset-bottom)}
+.tabs{position:fixed;top:0;left:0;right:0;max-width:480px;margin:0 auto;display:flex;z-index:10;
+  padding-top:env(safe-area-inset-top)}
 .tab{flex:1;padding:14px;background:#082626;color:#fff;border:0;font-size:16px;font-family:inherit}
 .tab.on.krs{background:#003c61}
 .tab.on.kat{background:#132914}
@@ -42,6 +45,19 @@ input.err{background:#590d0b}
 </style>
 </head>
 <body>
+
+<script>
+window.onerror = function (msg, src, line) {
+  var s = document.getElementById('status');
+  if (s) s.textContent = 'ОШИБКА JS: ' + msg + ' (строка ' + line + ')';
+};
+</script>
+
+<div class="tabs">
+  <button class="tab on krs" id="tabKrs" onclick="switchMode('krs')">КРС</button>
+  <button class="tab kat" id="tabKat" onclick="switchMode('kat')">КЕЙТЕРИНГ</button>
+</div>
+
 <div id="lockBar">Записи заблокированы администратором</div>
 
 <div id="main" class="disp">0:00:00</div>
@@ -50,7 +66,6 @@ input.err{background:#590d0b}
   <div id="lap" class="disp-lap">0:00:00</div>
 </div>
 
-<!-- Поля режима КРС -->
 <div id="krsFields">
   <div class="row-label">Номер входной</div>
   <input id="entry" inputmode="numeric" maxlength="17" oninput="entryInput()">
@@ -70,7 +85,6 @@ input.err{background:#590d0b}
   <textarea id="noteK" rows="2" maxlength="300"></textarea>
 </div>
 
-<!-- Поля режима Кейтеринг -->
 <div id="katFields" style="display:none">
   <div class="row-label">Номер точки</div>
   <input id="point" autocomplete="off" oninput="pointInput()">
@@ -101,37 +115,33 @@ input.err{background:#590d0b}
 </div>
 <div id="status"></div>
 
-<div class="tabs">
-  <button class="tab on krs" id="tabKrs" onclick="switchMode('krs')">КРС</button>
-  <button class="tab kat" id="tabKat" onclick="switchMode('kat')">КЕЙТЕРИНГ</button>
-</div>
-
 <script>
-const API = https://script.google.com/macros/s/AKfycbxtNHriDRJXNoNlRf3dqHTeI8klmNekkMNd4WOY0AFyvgZf48xeV3lfCyAAZv0aBZiAUA/exec;
-const $ = id => document.getElementById(id);
+var API = https://script.google.com/macros/s/AKfycbxtNHriDRJXNoNlRf3dqHTeI8klmNekkMNd4WOY0AFyvgZf48xeV3lfCyAAZv0aBZiAUA/exec;
+function $(id) { return document.getElementById(id); }
 
-let dict = { locked: false, points: [], operators: {}, inputs: [] };
-let mode = 'krs';
-let mainRun = false, mainStart = 0, mainFinal = null;
-let lapRun = false, lapStart = 0, lapFinal = null;
-let startLocal = null, lapLocal = null, stopLocal = null;
-let stopClicks = [];
+var dict = { locked: false, points: [], operators: {}, inputs: [] };
+var mode = 'krs';
+var mainRun = false, mainStart = 0, mainFinal = null;
+var lapRun = false, lapStart = 0, lapFinal = null;
+var startLocal = null, lapLocal = null, stopLocal = null;
+var stopClicks = [];
 
-const nowStr = d => {
-  const p = n => String(n).padStart(2, '0');
+function nowStr(d) {
+  function p(n) { return String(n).padStart(2, '0'); }
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' '
        + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
-};
-const fmt = ms => {
-  const s = Math.max(0, Math.floor(ms / 1000)), p = n => String(n).padStart(2, '0');
+}
+function fmt(ms) {
+  var s = Math.max(0, Math.floor(ms / 1000));
+  function p(n) { return String(n).padStart(2, '0'); }
   return Math.floor(s / 3600) + ':' + p(Math.floor(s % 3600 / 60)) + ':' + p(s % 60);
-};
-const status = t => $('status').textContent = t;
+}
+function status(t) { $('status').textContent = t; }
 
 function setDisplays() {
   $('main').textContent = mainRun ? fmt(Date.now() - mainStart)
-                        : (mainFinal != null ? fmt(mainFinal) : '0:00:00');
-  const showLap = mode === 'kat' && (lapRun || lapFinal != null);
+                        : (mainFinal !== null ? fmt(mainFinal) : '0:00:00');
+  var showLap = mode === 'kat' && (lapRun || lapFinal !== null);
   $('lapWrap').style.display = showLap ? 'block' : 'none';
   if (showLap) $('lap').textContent = lapRun ? fmt(Date.now() - lapStart) : fmt(lapFinal);
 }
@@ -139,16 +149,17 @@ setInterval(setDisplays, 250);
 
 function start() {
   if (dict.locked) return status('Записи заблокированы администратором');
-  if (mainRun || mainFinal != null) return; // неактивна до СТОП/сброса
+  if (mainRun || mainFinal !== null) return;
   mainRun = true; mainStart = Date.now(); startLocal = nowStr(new Date());
   setDisplays();
 }
 
 function stop() {
-  const t = Date.now();
+  var t = Date.now();
   if (mainRun) { mainFinal = t - mainStart; mainRun = false; stopLocal = nowStr(new Date()); }
   if (lapRun)  { lapFinal = t - lapStart; lapRun = false; }
-  stopClicks = stopClicks.filter(x => t - x < 3000).concat(t);
+  stopClicks = stopClicks.filter(function (x) { return t - x < 3000; });
+  stopClicks.push(t);
   if (stopClicks.length >= 3) { stopClicks = []; resetAll(); return status('Форма сброшена'); }
   setDisplays();
 }
@@ -169,11 +180,12 @@ function switchMode(m) {
 }
 
 function resetAll() {
-  mainRun = lapRun = false; mainFinal = lapFinal = null;
-  startLocal = lapLocal = stopLocal = null;
-  ['entry','bib','point','kassa','kassCount','staff','queue','noteK','noteKt']
-    .forEach(id => { const e = $(id); if (e) e.value = ''; });
-  document.querySelectorAll('[data-group] .tg').forEach(b => b.classList.remove('on'));
+  mainRun = false; lapRun = false; mainFinal = null; lapFinal = null;
+  startLocal = null; lapLocal = null; stopLocal = null;
+  ['entry','bib','point','kassa','kassCount','staff','queue','noteK','noteKt'].forEach(function (id) {
+    var e = $(id); if (e) e.value = '';
+  });
+  document.querySelectorAll('[data-group] .tg').forEach(function (b) { b.classList.remove('on'); });
   $('chkPrint').classList.remove('on'); $('chkIssue').classList.remove('on');
   $('pointList').innerHTML = ''; $('point').classList.remove('err');
   $('latinHint').style.display = 'none';
@@ -183,107 +195,119 @@ function resetAll() {
 /* ---------- ввод ---------- */
 function digits(el, max) { el.value = el.value.replace(/\D/g, '').slice(0, max); }
 function entryInput() {
-  const d = $('entry').value.replace(/\D/g, '').slice(0, 16);
+  var d = $('entry').value.replace(/\D/g, '').slice(0, 16);
   $('entry').value = d ? 'G' + d : '';
 }
 function pointInput() {
-  const v = $('point').value.toUpperCase();
+  var v = $('point').value.toUpperCase();
   $('point').value = v;
-  const latin = /^[A-Z0-9]*$/.test(v);
+  var latin = /^[A-Z0-9]*$/.test(v);
   $('point').classList.toggle('err', !latin);
   $('latinHint').style.display = latin ? 'none' : 'block';
-  const q = $('pointList');
-  if (!v || !latin) { q.innerHTML = ''; return; }
-  const m = dict.points.filter(p => p.toUpperCase().includes(v)).slice(0, 8);
-  q.innerHTML = m.map(p => '<div onclick="pickPoint(\'' + p + '\')">' + p + '</div>').join('');
+  var q = $('pointList');
+  q.innerHTML = '';
+  if (!v || !latin) return;
+  var m = dict.points.filter(function (p) { return p.toUpperCase().indexOf(v) !== -1; }).slice(0, 8);
+  m.forEach(function (p) {
+    var d = document.createElement('div');
+    d.textContent = p;
+    d.onclick = function () { pickPoint(p); };
+    q.appendChild(d);
+  });
 }
 function pickPoint(p) {
   $('point').value = p; $('pointList').innerHTML = '';
   $('point').classList.remove('err'); $('latinHint').style.display = 'none';
 }
 function pick(el) {
-  [...el.parentElement.children].forEach(b => b.classList.remove('on'));
+  var kids = el.parentElement.children;
+  for (var i = 0; i < kids.length; i++) kids[i].classList.remove('on');
   el.classList.add('on');
 }
-const sel = g => {
-  const b = document.querySelector('[data-group="' + g + '"] .on');
-  return b ? b.dataset.val : '';
-};
+function sel(g) {
+  var b = document.querySelector('[data-group="' + g + '"] .on');
+  return b ? b.getAttribute('data-val') : '';
+}
 
 /* ---------- экспорт ---------- */
 function exportRec() {
   if (dict.locked) return status('Записи заблокированы администратором');
   if (mainRun || lapRun) return status('Сначала нажмите СТОП');
-  if (mainFinal == null) return status('Нет замера для экспорта');
+  if (mainFinal === null) return status('Нет замера для экспорта');
 
-  let rec;
+  var rec;
   if (mode === 'krs') {
-    const entry = $('entry').value, bib = $('bib').value;
-    const kontur = sel('kontur'), osmotr = sel('osmotr');
+    var entry = $('entry').value, bib = $('bib').value;
+    var kontur = sel('kontur'), osmotr = sel('osmotr');
     if (!entry) return status('Заполните «Номер входной»');
-    if (!dict.inputs.includes(entry)) return status('Номер «' + entry + '» отсутствует в списке входных');
+    if (dict.inputs.indexOf(entry) === -1) return status('Номер «' + entry + '» отсутствует в списке входных');
     if (!bib) return status('Заполните «Номер манишки»');
     if (!kontur) return status('Выберите тип контура');
     if (!osmotr) return status('Выберите тип осмотра');
-    rec = { mode: 'krs', entry, kontur, osmotr, bib,
-            durSec: Math.round(mainFinal / 1000), note: $('noteK').value, stopLocal };
+    rec = { mode: 'krs', entry: entry, kontur: kontur, osmotr: osmotr, bib: bib,
+            durSec: Math.round(mainFinal / 1000), note: $('noteK').value, stopLocal: stopLocal };
   } else {
-    const point = $('point').value, kassa = $('kassa').value;
+    var point = $('point').value, kassa = $('kassa').value;
     if (!point) return status('Заполните «Номер точки»');
     if (!/^[A-Z0-9]+$/.test(point)) return status('Используй латиницу!');
-    if (!dict.points.includes(point)) return status('Точки «' + point + '» нет в списке точек');
+    if (dict.points.indexOf(point) === -1) return status('Точки «' + point + '» нет в списке точек');
     if (!kassa) return status('Заполните «Номер кассы»');
-    const hadLap = lapFinal != null;
+    var hadLap = lapFinal !== null;
     if (hadLap && !$('staff').value) return status('Заполните «Количество работающих персонала»');
-    rec = { mode: 'katering', point, kassa,
+    rec = { mode: 'katering', point: point, kassa: kassa,
             kassCount: $('kassCount').value, staff: $('staff').value, queue: $('queue').value,
             print: $('chkPrint').classList.contains('on'),
             issue: $('chkIssue').classList.contains('on'),
-            note: $('noteKt').value, hadLap, startLocal, lapLocal,
+            note: $('noteKt').value, hadLap: hadLap, startLocal: startLocal, lapLocal: lapLocal,
             mainSec: Math.round(mainFinal / 1000),
             lapSec: hadLap ? Math.round(lapFinal / 1000) : null };
   }
-  const q = getQ(); q.push(rec); saveQ(q);
+  var q = getQ(); q.push(rec); saveQ(q);
   resetAll();
   status('Отправка…');
   sync();
 }
 
 /* ---------- очередь и синхронизация ---------- */
-const getQ  = () => JSON.parse(localStorage.getItem('zamer') || '[]');
-const saveQ = q => localStorage.setItem('zamer', JSON.stringify(q));
-let syncing = false;
+function getQ() { try { return JSON.parse(localStorage.getItem('zamer') || '[]'); } catch (e) { return []; } }
+function saveQ(q) { localStorage.setItem('zamer', JSON.stringify(q)); }
+var syncing = false;
 
-async function sync() {
+function sync() {
   if (syncing || dict.locked) return;
   syncing = true;
-  const rest = [];
-  for (const rec of getQ()) {
-    try {
-      const r = await fetch(API, { method: 'POST', body: JSON.stringify(rec) });
-      const j = await r.json();
-      if (!j.ok) { rest.push(rec); status(j.error || 'Ошибка отправки'); }
-    } catch (e) { rest.push(rec); }
-  }
-  saveQ(rest);
-  status(rest.length ? 'Не отправлено: ' + rest.length : 'Всё синхронизировано');
-  syncing = false;
+  var rest = [];
+  var chain = Promise.resolve();
+  getQ().forEach(function (rec) {
+    chain = chain.then(function () {
+      return fetch(API, { method: 'POST', body: JSON.stringify(rec) })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (!j.ok) { rest.push(rec); status(j.error || 'Ошибка отправки'); }
+        });
+    }).catch(function () { rest.push(rec); });
+  });
+  chain.then(function () {
+    saveQ(rest);
+    status(rest.length ? 'Не отправлено: ' + rest.length : 'Всё синхронизировано');
+    syncing = false;
+  });
 }
 
 /* ---------- справочники и блокировка ---------- */
-async function loadDict() {
-  try {
-    const r = await fetch(API);
-    dict = await r.json();
+function loadDict() {
+  fetch(API).then(function (r) { return r.json(); }).then(function (j) {
+    dict = j;
     $('lockBar').style.display = dict.locked ? 'block' : 'none';
-  } catch (e) {}
+  }).catch(function () {});
 }
 
 window.addEventListener('online', sync);
 setInterval(sync, 30000);
 setInterval(loadDict, 60000);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js');
-loadDict(); setDisplays();
+loadDict();
+setDisplays();
 </script>
 </body>
 </html>
