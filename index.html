@@ -15,23 +15,52 @@
 
 body{
   margin:0 auto; max-width:480px; background:#000; color:#fff;
-  padding:calc(env(safe-area-inset-top) + 80px) 16px 20px;
+  /* Подняли таймер на 10px (было 80px) */
+  padding:calc(env(safe-area-inset-top) + 70px) 16px 20px;
   font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
+
 .form-container {
-  min-height: 360px; /* Фиксирует высоту, чтобы кнопки не прыгали */
-  margin-top: 100px;  /* Опускает поля ниже от таймера */
+  /* Уменьшили высоту, так как поля стали тоньше */
+  min-height: 340px; 
 }
+
+#krsFields {
+  /* Оставляем отступ для КРС (место под круг уже зарезервировано в HTML) */
+  margin-top: 20px;  
+}
+
+#katFields {
+  margin-top: 20px; 
+}  
+
 /* Таймеры */
-.disp{font-size:72px;text-align:center;color:#fff;font-variant-numeric:tabular-nums;line-height:1.1;margin-top:8px;font-weight:400}
-.disp-lap{font-size:32px;text-align:left;color:#fff;font-variant-numeric:tabular-nums;line-height:1.1;margin-left:10px;margin-top:4px;font-weight:300}
+.disp{
+  font-size:72px; text-align:center; color:#fff; font-variant-numeric:tabular-nums; 
+  line-height:1.1; margin-top:8px; font-weight:400;
+  transition: font-size 0.3s ease; /* Добавили плавность */
+}
+
+/* Класс для уменьшения главного таймера при появлении круга */
+.disp.shrink {
+  font-size: 48px; 
+}
+
+/* Таймер круга — ровно 27px по ТЗ */
+.disp-lap{
+  font-size:27px; text-align:left; color:#fff; font-variant-numeric:tabular-nums; 
+  line-height:1.1; margin-left:10px; margin-top:4px; font-weight:300;
+}
 
 /* Верхние табы */
 .tabs{
   position:fixed; top:0; left:0; right:0; max-width:480px; margin:0 auto;
   display:flex; z-index:10; padding:4px; background:#222; border-radius:999px;
-  width:92%; box-sizing:border-box; margin-top:calc(env(safe-area-inset-top) + 10px);
+  width:92%; box-sizing:border-box; 
+  /* Подняли табы на 4px (было 10px) */
+  margin-top:calc(env(safe-area-inset-top) + 6px);
 }
+
 .tab{
   flex:1; padding:12px; background:#082626; color:#fff; border:0; border-radius:999px;
   font-size:16px; font-family:inherit; font-weight:normal; text-align:center; transition:0.2s;
@@ -52,13 +81,18 @@ body{
 input,textarea{
   background:#333333; color:#fff; border:0; border-radius:8px;
   padding:12px; font-size:16px; font-family:inherit; text-align:center;
-  width:100%; box-sizing:border-box; height:44px;
+  width:100%; box-sizing:border-box; 
+  height:42px; /* Уменьшили с 44px */
 }
 textarea{text-align:left; resize:none; height:auto; min-height:60px}
 input.err{background:#590d0b}
 
 /* Переключатели (Контур, Осмотр) - Мини-табы */
-.toggles{display:flex; background:#222; border-radius:999px; padding:3px; height:44px; box-sizing:border-box}
+.toggles{
+  display:flex; background:#222; border-radius:999px; padding:3px; 
+  height:42px; /* Уменьшили с 44px */
+  box-sizing:border-box
+}
 .tg{
   flex:1; background:#082626; color:#fff; border:0; border-radius:999px;
   font-size:12px; font-weight:normal; text-align:center; font-family:inherit;
@@ -68,7 +102,7 @@ input.err{background:#590d0b}
 
 /* Чеки (Печать/Выдача) - чтобы не ломали капсулу */
 #katFields .toggles { background:transparent; padding:0; gap:8px; height:auto; }
-#katFields .tg { background:#222; padding:10px; border-radius:8px; height:44px;}
+#katFields .tg { background:#222; padding:10px; border-radius:8px; height:42px; } /* Уменьшили с 44px */
 #katFields .tg.on { background:#005a8d; }
 
 /* Кнопки действий */
@@ -106,7 +140,7 @@ window.onerror = function (msg, src, line) {
 <div id="lockBar">Записи заблокированы администратором</div>
 
 <div id="main" class="disp">0:00:00</div>
-<div id="lapWrap" style="display:none">
+<div id="lapWrap" style="visibility: hidden; height: 32px; margin-top: 4px;">
   <span class="row-label">Круг:</span>
   <div id="lap" class="disp-lap">0:00:00</div>
 </div>
@@ -238,10 +272,16 @@ function setDisplays() {
   }
 
   var showLap = mode === 'kat' && (lapRun || lapFinal !== null);
+  
   if (showLap !== lastLapVisible) {
-    $('lapWrap').style.display = showLap ? 'block' : 'none';
+    $('lapWrap').style.visibility = showLap ? 'visible' : 'hidden';
+    
+    // ВОТ ОНА — НУЖНАЯ СТРОКА. Она добавляет класс .shrink главному таймеру
+    $('main').classList.toggle('shrink', showLap); 
+    
     lastLapVisible = showLap;
   }
+  
   if (showLap) {
     var lapText = lapRun ? fmt(Date.now() - lapStart) : fmt(lapFinal);
     if (lapText !== lastLapText) {
