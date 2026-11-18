@@ -116,6 +116,14 @@ input.err{background:#590d0b}
 #bExport{background:#262626;color:#fff}
 #bStop{background:#2c122a;color:#ff01ed}
 
+  /* Эффект нажатия на кнопки */
+.btn {
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+.btn:active, .tab:active, .tg:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
 /* Подсказки */
 .hint{display:none;color:#ff6b6b;font-size:11px;margin-top:4px}
 .suggest{max-height:150px;overflow:auto;border-radius:6px;margin-top:2px}
@@ -494,6 +502,19 @@ function sync() {
     }
   });
 }
+
+/* ---------- Виброотклик ---------- */
+function haptic() {
+  // Сработает только на Android или в браузерах, где это разрешено
+  if (navigator.vibrate) {
+    navigator.vibrate(30); // Короткая вибрация на 30 миллисекунд
+  }
+}
+
+// Привязываем вибрацию к основным кнопкам, верхним табам и переключателям
+document.querySelectorAll('.btn, .tab, .tg').forEach(function(el) {
+  el.addEventListener('click', haptic);
+});
   
 /* ---------- справочники и блокировка ---------- */
 function loadDict() {
