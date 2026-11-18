@@ -357,27 +357,55 @@ function entryInput() {
 }
 function pointInput() {
   var v = $('point').value.toUpperCase();
+  
+  // МАГИЯ: заменяем все множественные пробелы на один
+  v = v.replace(/\s+/g, ' ');
+  
   $('point').value = v;
   
-  // Хитрость: перед проверкой мы "удаляем" слово УЛИЦА из строки. 
-  // Если останутся другие русские буквы (например, от слова МТ), мы их поймаем.
+  // Проверка на кириллицу (с исключением для слова УЛИЦА)
   var checkV = v.replace(/УЛИЦА/g, '');
   var hasCyrillic = /[А-ЯЁ]/.test(checkV); 
   
-  $('point').classList.toggle('err', hasCyrillic);
-  $('latinHint').style.display = hasCyrillic ? 'block' : 'none';
+  // Проверка: если начинается с MT и следом НЕ пробел (например, MT5.1)
+  var hasMtError = /^MT[^ ]/.test(v) && v.length > 2;
+  
+  // ПРОВЕРКА НА ЗАПРЕЩЁННУЮ ТОЧКУ (берем список с сервера)
+  var isBanned = (dict.bannedPoints || []).indexOf(v) !== -1;
+  
+  // Если есть любая из ошибок
+  var hasError = hasCyrillic || hasMtError || isBanned;
+  
+  $('point').classList.toggle('err', hasError);
+  
+  var hintEl = $('latinHint');
+  
+  // Приоритет подсказок: сначала запрещенная точка, потом пробел, потом кириллица
+  if (isBanned) {
+    hintEl.textContent = 'Эта точка питания не участвует в замерах!';
+    hintEl.style.display = 'block';
+  } else if (hasMtError) {
+    hintEl.textContent = 'Поставь пробел после MT!';
+    hintEl.style.display = 'block';
+  } else if (hasCyrillic) {
+    hintEl.textContent = 'Используй латиницу!';
+    hintEl.style.display = 'block';
+  } else {
+    hintEl.style.display = 'none';
+  }
   
   var q = $('pointList');
   q.innerHTML = '';
   
-  if (!v || hasCyrillic) return;
+  // Если поле пустое или есть ошибка — список не показываем
+  if (!v || hasError) return;
   
-  // Ищем совпадения (с точками и пробелами)
+  // Ищем совпадения
   var m = (dict.points || []).filter(function (p) { 
     return p.toUpperCase().indexOf(v) !== -1; 
   });
   
-  // Умная сортировка
+  // Умная сортировка (сначала те, что начинаются с введенных символов)
   m.sort(function(a, b) {
     var aStarts = a.toUpperCase().startsWith(v);
     var bStarts = b.toUpperCase().startsWith(v);
@@ -386,8 +414,10 @@ function pointInput() {
     return a.localeCompare(b);
   });
 
-  m = m.slice(0, 10); // Ограничили до 10 вариантов (как вы и просили)
+  // Ограничиваем выдачу 10 вариантами
+  m = m.slice(0, 10);
   
+  // Отрисовываем список
   m.forEach(function (p) {
     var d = document.createElement('div');
     d.textContent = p;
@@ -395,6 +425,7 @@ function pointInput() {
     q.appendChild(d);
   });
 }
+  
 function pickPoint(p) {
   $('point').value = p; $('pointList').innerHTML = '';
   $('point').classList.remove('err'); $('latinHint').style.display = 'none';
@@ -431,22 +462,34 @@ function exportRec() {
   if (mode === 'krs') {
     var entry = $('entry').value, bib = $('bib').value;
     var kontur = sel('kontur'), osmotr = sel('osmotr');
+    
     if (!entry) return status('Заполните «Номер входной»');
     if (!dict.inputs || dict.inputs.indexOf(entry) === -1) return status('Номер «' + entry + '» отсутствует в списке входных');
     if (!bib) return status('Заполните «Номер манишки»');
     if (!kontur) return status('Выберите тип контура');
     if (!osmotr) return status('Выберите тип осмотра');
-      rec = { mode: 'krs', entry: entry, kontur: kontur, osmotr: osmotr, bib: bib,
+    
+    rec = { mode: 'krs', entry: entry, kontur: kontur, osmotr: osmotr, bib: bib,
             durSec: Math.round(mainFinal / 1000), note: $('noteK').value, startLocal: startLocal };
-   } else {
+            
+  } else {
     var point = $('point').value, kassa = $('kassa').value;
+    
     if (!point) return status('Заполните «Номер точки»');
     
-    // Проверка на кириллицу (с исключением для слова УЛИЦА)
+    // 1. Проверка на кириллицу (с исключением для слова УЛИЦА)
     var checkPoint = point.replace(/УЛИЦА/g, '');
-    if (/[А-ЯЁ]/.test(checkPoint)) return status('Используй латиницу!'); 
+    if (/[А-ЯЁ]/.test(checkPoint)) return status('Используй латиницу!');
     
+    // 2. Проверка на пробел после MT
+    if (/^MT[^ ]/.test(point) && point.length > 2) return status('Поставь пробел после MT!');
+    
+    // 3. ПРОВЕРКА НА ЗАПРЕЩЁННУЮ ТОЧКУ (из настроек)
+    if ((dict.bannedPoints || []).indexOf(point) !== -1) return status('Эта точка питания не участвует в замерах!');
+    
+    // 4. Проверка, что точка вообще есть в списке
     if (!dict.points || dict.points.indexOf(point) === -1) return status('Точки «' + point + '» нет в списке точек');
+    
     if (!kassa) return status('Заполните «Номер кассы»');
     
     var hadLap = lapFinal !== null;
@@ -462,6 +505,7 @@ function exportRec() {
             mainSec: Math.round(mainFinal / 1000),
             lapSec: hadLap ? Math.round(lapFinal / 1000) : null };
   }
+  
   var q = getQ(); q.push(rec); saveQ(q);
   resetAll();
   status('Отправка…');
