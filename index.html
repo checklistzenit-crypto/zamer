@@ -48,8 +48,8 @@ body{
 
 /* Таймер круга — ровно 27px по ТЗ */
 .disp-lap{
-  font-size:27px; text-align:left; color:#fff; font-variant-numeric:tabular-nums; 
-  line-height:1.1; margin-left:10px; margin-top:4px; font-weight:300;
+  font-size:27px; text-align:center; color:#fff; font-variant-numeric:tabular-nums; 
+  line-height:1.1; margin: 0; font-weight:300;
 }
 
 /* Верхние табы */
@@ -140,9 +140,13 @@ window.onerror = function (msg, src, line) {
 <div id="lockBar">Записи заблокированы администратором</div>
 
 <div id="main" class="disp">0:00:00</div>
-<div id="lapWrap" style="visibility: hidden; height: 32px; margin-top: 4px;">
-  <span class="row-label">Круг:</span>
-  <div id="lap" class="disp-lap">0:00:00</div>
+<div id="lapWrap" style="visibility: hidden; height: 32px; margin-top: 4px; display: flex; justify-content: center; align-items: center;">
+  <div style="position: relative; display: inline-flex; align-items: center;">
+    <!-- Подпись Круг: -->
+    <span class="row-label" style="position: absolute; right: 100%; margin-right: 10px; white-space: nowrap; margin-bottom: 0; margin-left: 0;">Круг:</span>
+    <!-- Сам таймер -->
+    <div id="lap" class="disp-lap">0:00:00</div>
+  </div>
 </div>
 
 <div class="form-container">
@@ -189,9 +193,9 @@ window.onerror = function (msg, src, line) {
     <div class="grid-2">
       <div>
         <div class="row-label">Номер точки</div>
-        <input id="point" autocomplete="off" oninput="pointInput()">
+        <input id="point" autocomplete="off" oninput="pointInput()" lang="en" autocapitalize="characters" spellcheck="false" pattern="[A-Za-z0-9\.\ \-]*">
         <div id="pointList" class="suggest"></div>
-        <div class="hint" id="latinHint">Используй латиницу!</div>
+        <div class="hint" id="latinHint">Переключите клавиатуру на английский!</div>
       </div>
       <div>
         <div class="row-label">Номер кассы</div>
@@ -346,13 +350,36 @@ function entryInput() {
 function pointInput() {
   var v = $('point').value.toUpperCase();
   $('point').value = v;
-  var latin = /^[A-Z0-9]*$/.test(v);
-  $('point').classList.toggle('err', !latin);
-  $('latinHint').style.display = latin ? 'none' : 'block';
+  
+  // Хитрость: перед проверкой мы "удаляем" слово УЛИЦА из строки. 
+  // Если останутся другие русские буквы (например, от слова МТ), мы их поймаем.
+  var checkV = v.replace(/УЛИЦА/g, '');
+  var hasCyrillic = /[А-ЯЁ]/.test(checkV); 
+  
+  $('point').classList.toggle('err', hasCyrillic);
+  $('latinHint').style.display = hasCyrillic ? 'block' : 'none';
+  
   var q = $('pointList');
   q.innerHTML = '';
-  if (!v || !latin) return;
-  var m = (dict.points || []).filter(function (p) { return p.toUpperCase().indexOf(v) !== -1; }).slice(0, 8);
+  
+  if (!v || hasCyrillic) return;
+  
+  // Ищем совпадения (с точками и пробелами)
+  var m = (dict.points || []).filter(function (p) { 
+    return p.toUpperCase().indexOf(v) !== -1; 
+  });
+  
+  // Умная сортировка
+  m.sort(function(a, b) {
+    var aStarts = a.toUpperCase().startsWith(v);
+    var bStarts = b.toUpperCase().startsWith(v);
+    if (aStarts && !bStarts) return -1;
+    if (!aStarts && bStarts) return 1;
+    return a.localeCompare(b);
+  });
+
+  m = m.slice(0, 10); // Ограничили до 10 вариантов (как вы и просили)
+  
   m.forEach(function (p) {
     var d = document.createElement('div');
     d.textContent = p;
@@ -401,18 +428,26 @@ function exportRec() {
     if (!bib) return status('Заполните «Номер манишки»');
     if (!kontur) return status('Выберите тип контура');
     if (!osmotr) return status('Выберите тип осмотра');
-    rec = { mode: 'krs', entry: entry, kontur: kontur, osmotr: osmotr, bib: bib,
-            durSec: Math.round(mainFinal / 1000), note: $('noteK').value, stopLocal: stopLocal };
-  } else {
+      rec = { mode: 'krs', entry: entry, kontur: kontur, osmotr: osmotr, bib: bib,
+            durSec: Math.round(mainFinal / 1000), note: $('noteK').value, startLocal: startLocal };
+   } else {
     var point = $('point').value, kassa = $('kassa').value;
     if (!point) return status('Заполните «Номер точки»');
-    if (!/^[A-Z0-9]+$/.test(point)) return status('Используй латиницу!');
+    
+    // Проверка на кириллицу (с исключением для слова УЛИЦА)
+    var checkPoint = point.replace(/УЛИЦА/g, '');
+    if (/[А-ЯЁ]/.test(checkPoint)) return status('Используй латиницу!'); 
+    
     if (!dict.points || dict.points.indexOf(point) === -1) return status('Точки «' + point + '» нет в списке точек');
     if (!kassa) return status('Заполните «Номер кассы»');
+    
     var hadLap = lapFinal !== null;
     if (hadLap && !$('queue').value) return status('Заполните «Человек в очереди»');
+    
     rec = { mode: 'katering', point: point, kassa: kassa,
-            kassCount: $('kassCount').value, staff: $('staff').value, queue: $('queue').value,
+            kassCount: $('kassCount').value || null, 
+            staff: $('staff').value || null, 
+            queue: $('queue').value || null,
             print: $('chkPrint').classList.contains('on'),
             issue: $('chkIssue').classList.contains('on'),
             note: $('noteKt').value, hadLap: hadLap, startLocal: startLocal, lapLocal: lapLocal,
