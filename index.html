@@ -18,7 +18,10 @@ body{
   padding:calc(env(safe-area-inset-top) + 80px) 16px 20px;
   font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
-
+.form-container {
+  min-height: 360px; /* Фиксирует высоту, чтобы кнопки не прыгали */
+  margin-top: 24px;  /* Опускает поля ниже от таймера */
+}
 /* Таймеры */
 .disp{font-size:72px;text-align:center;color:#fff;font-variant-numeric:tabular-nums;line-height:1.1;margin-top:8px;font-weight:400}
 .disp-lap{font-size:32px;text-align:left;color:#fff;font-variant-numeric:tabular-nums;line-height:1.1;margin-left:10px;margin-top:4px;font-weight:300}
@@ -34,7 +37,7 @@ body{
   font-size:16px; font-family:inherit; font-weight:normal; text-align:center; transition:0.2s;
 }
 .tab.on.krs { background:#003c61; }
-.tab.on.kat { background:#132914; }
+.tab.on.kat { background:#255010; }
 
 /* Плашка блокировки */
 #lockBar{display:none;background:#590d0b;color:#fff;text-align:center;padding:10px;border-radius:8px;margin-bottom:12px;font-size:14px}
@@ -108,83 +111,97 @@ window.onerror = function (msg, src, line) {
   <div id="lap" class="disp-lap">0:00:00</div>
 </div>
 
-<div id="krsFields">
-  <!-- Ряд 1: Номер входной и Номер манишки -->
-  <div class="grid-2">
-    <div>
-      <div class="row-label">Номер входной</div>
-      <input id="entry" inputmode="numeric" maxlength="17" oninput="entryInput()">
-    </div>
-    <div>
-      <div class="row-label">Номер манишки</div>
-      <input id="bib" inputmode="numeric" maxlength="4" oninput="digits(this,4)">
-    </div>
-  </div>
-
-  <!-- Ряд 2: Тип контура и Тип осмотра (наши "мини-табы") -->
-  <div class="grid-2" style="margin-top: 14px;">
-    <div>
-      <div class="row-label">Тип контура</div>
-      <div class="toggles" data-group="kontur">
-        <button class="tg" data-val="Теплый" onclick="pick(this)">Тёплый</button>
-        <button class="tg" data-val="Холодный" onclick="pick(this)">Холод.</button>
+<div class="form-container">
+  
+  <!-- ================= ВКЛАДКА КРС ================= -->
+  <div id="krsFields">
+    <!-- Ряд 1: Номер входной и Номер манишки -->
+    <div class="grid-2">
+      <div>
+        <div class="row-label">Номер входной</div>
+        <input id="entry" inputmode="numeric" maxlength="17" oninput="entryInput()">
+      </div>
+      <div>
+        <div class="row-label">Номер манишки</div>
+        <input id="bib" inputmode="numeric" maxlength="4" oninput="digits(this,4)">
       </div>
     </div>
-    <div>
-      <div class="row-label">Тип осмотра</div>
-      <div class="toggles" data-group="osmotr">
-        <button class="tg" data-val="Тело" onclick="pick(this)">Тело</button>
-        <button class="tg" data-val="Ручная кладь" onclick="pick(this)">Кладь</button>
+
+    <!-- Ряд 2: Тип контура и Тип осмотра -->
+    <div class="grid-2" style="margin-top: 14px;">
+      <div>
+        <div class="row-label">Тип контура</div>
+        <div class="toggles" data-group="kontur">
+          <button class="tg" data-val="Теплый" onclick="pick(this)">Тёплый</button>
+          <button class="tg" data-val="Холодный" onclick="pick(this)">Холод.</button>
+        </div>
+      </div>
+      <div>
+        <div class="row-label">Тип осмотра</div>
+        <div class="toggles" data-group="osmotr">
+          <button class="tg" data-val="Тело" onclick="pick(this)">Тело</button>
+          <button class="tg" data-val="Ручная кладь" onclick="pick(this)">Кладь</button>
+        </div>
+      </div>
+    </div> <!-- ВАЖНО: Вот этот тег у тебя потерялся -->
+
+    <!-- Ряд 3: Примечание -->
+    <div class="row-label" style="margin-top: 14px;">Примечание</div>
+    <textarea id="noteK" rows="2" maxlength="300"></textarea>
+  </div>
+
+  <!-- ================= ВКЛАДКА КЕЙТЕРИНГ ================= -->
+  <div id="katFields" style="display:none">
+    <div class="grid-2">
+      <div>
+        <div class="row-label">Номер точки</div>
+        <input id="point" autocomplete="off" oninput="pointInput()">
+        <div id="pointList" class="suggest"></div>
+        <div class="hint" id="latinHint">Используй латиницу!</div>
+      </div>
+      <div>
+        <div class="row-label">Номер кассы</div>
+        <input id="kassa" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
       </div>
     </div>
-  </div>
 
-  <!-- Ряд 3: Примечание -->
-  <div class="row-label" style="margin-top: 14px;">Примечание</div>
-  <textarea id="noteK" rows="2" maxlength="300"></textarea>
-</div>
-
-<div id="katFields" style="display:none">
-  <div class="grid-2">
-    <div>
-      <div class="row-label">Номер точки</div>
-      <input id="point" autocomplete="off" oninput="pointInput()">
-      <div id="pointList" class="suggest"></div>
-      <div class="hint" id="latinHint">Используй латиницу!</div>
-    </div>
-    <div>
-      <div class="row-label">Номер кассы</div>
-      <input id="kassa" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
-    </div>
-  </div>
-
-  <div class="grid-2">
-    <div>
-      <div class="row-label">Количество работающих касс</div>
-      <input id="kassCount" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
-    </div>
-    <div>
-      <div class="row-label">Количество работающих персонала</div>
-      <input id="staff" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
-    </div>
-  </div>
-
-  <div class="grid-2">
-    <div>
-      <div class="row-label">Чеки</div>
-      <div class="toggles">
-        <button class="tg" id="chkPrint" onclick="this.classList.toggle('on')">Печать</button>
-        <button class="tg" id="chkIssue" onclick="this.classList.toggle('on')">Выдача</button>
+    <div class="grid-2">
+      <div>
+        <div class="row-label">Количество работающих касс</div>
+        <input id="kassCount" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
+      </div>
+      <div>
+        <div class="row-label">Количество работающих персонала</div>
+        <input id="staff" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
       </div>
     </div>
-    <div>
-      <div class="row-label">Человек в очереди</div>
-      <input id="queue" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
+
+    <div class="grid-2">
+      <div>
+        <div class="row-label">Чеки</div>
+        <div class="toggles">
+          <button class="tg" id="chkPrint" onclick="this.classList.toggle('on')">Печать</button>
+          <button class="tg" id="chkIssue" onclick="this.classList.toggle('on')">Выдача</button>
+        </div>
+      </div>
+      <div>
+        <div class="row-label">Человек в очереди</div>
+        <input id="queue" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
+      </div>
     </div>
+
+    <div class="row-label" style="margin-top:8px;">Примечание</div>
+    <textarea id="noteKt" rows="2" maxlength="400"></textarea>
   </div>
 
-  <div class="row-label" style="margin-top:8px;">Примечание</div>
-  <textarea id="noteKt" rows="2" maxlength="400"></textarea>
+</div> 
+<!-- ЗАКРЫТИЕ form-container: теперь он охватывает ОБЕ вкладки целиком -->
+
+<div class="btns">
+  <button class="btn" id="bStart" onclick="start()">СТАРТ</button>
+  <button class="btn" id="bLap" onclick="lap()">КРУГ</button>
+  <button class="btn" id="bExport" onclick="exportRec()">ЭКСПОРТ</button>
+  <button class="btn" id="bStop" onclick="stop()">СТОП</button>
 </div>
 
 <div class="btns">
