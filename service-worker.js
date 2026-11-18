@@ -1,4 +1,4 @@
-const CACHE = 'zamer-v3.9';
+const CACHE = 'zamer-v3.10';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.png'];
 
 self.addEventListener('install', e => {
