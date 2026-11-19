@@ -216,11 +216,11 @@ window.onerror = function (msg, src, line) {
     <div class="grid-2">
       <div>
         <div class="row-label">Количество работающих касс</div>
-        <input id="kassCount" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
+        <input id="kassCount" inputmode="numeric" maxlength="2" oninput="digits(this,2); checkKassa()">
       </div>
       <div>
         <div class="row-label">Количество работающего персонала</div>
-        <input id="kassCount" inputmode="numeric" maxlength="2" oninput="digits(this,2); checkKassa()">
+        <input id="staff" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
       </div>
     </div>
 
@@ -515,7 +515,7 @@ function exportRec() {
     if (!dict.points || dict.points.indexOf(point) === -1) return status('Точки «' + point + '» нет в списке точек');
     
     if (!kassa) return status('Заполните «Номер кассы»');
-    if (!checkKassa()) return status('Номер кассы не может быть больше количества работающих касс!');
+    if (!checkKassa()) return status('Номер не может быть больше количества работающих касс!');
     
     var hadLap = lapFinal !== null;
     if (hadLap && !$('queue').value) return status('Заполните «Человек в очереди»');
