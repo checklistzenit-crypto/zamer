@@ -208,7 +208,8 @@ window.onerror = function (msg, src, line) {
       </div>
       <div>
         <div class="row-label">Номер кассы</div>
-        <input id="kassa" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
+        <input id="kassa" inputmode="numeric" maxlength="2" oninput="digits(this,2); checkKassa()">
+        <div class="hint" id="kassaHint">Номер кассы больше числа работающих касс!</div>
       </div>
     </div>
 
@@ -219,7 +220,7 @@ window.onerror = function (msg, src, line) {
       </div>
       <div>
         <div class="row-label">Количество работающих персонала</div>
-        <input id="staff" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
+        <input id="kassCount" inputmode="numeric" maxlength="2" oninput="digits(this,2); checkKassa()">
       </div>
     </div>
 
@@ -349,6 +350,8 @@ function resetAll() {
   $('entry').classList.remove('err'); 
   $('entryHint').style.display = 'none';
   $('latinHint').style.display = 'none';
+  $('kassa').classList.remove('err');
+  $('kassaHint').style.display = 'none';
   setDisplays();
 }
 
@@ -366,35 +369,26 @@ function entryInput() {
       isInvalid = true;
     }
   }
-
   $('entry').classList.toggle('err', isInvalid);
   $('entryHint').style.display = isInvalid ? 'block' : 'none';
 }
+  
 function pointInput() {
   var v = $('point').value.toUpperCase();
-  
   // МАГИЯ: заменяем все множественные пробелы на один
-  v = v.replace(/\s+/g, ' ');
-  
-  $('point').value = v;
-  
+  v = v.replace(/\s+/g, ' '); 
+  $('point').value = v; 
   // Проверка на кириллицу (с исключением для слова УЛИЦА)
   var checkV = v.replace(/УЛИЦА/g, '');
   var hasCyrillic = /[А-ЯЁ]/.test(checkV); 
-  
   // Проверка: если начинается с MT и следом НЕ пробел (например, MT5.1)
-  var hasMtError = /^MT[^ ]/.test(v) && v.length > 2;
-  
+  var hasMtError = /^MT[^ ]/.test(v) && v.length > 2;  
   // ПРОВЕРКА НА ЗАПРЕЩЁННУЮ ТОЧКУ (берем список с сервера)
   var isBanned = (dict.bannedPoints || []).indexOf(v) !== -1;
-  
   // Если есть любая из ошибок
   var hasError = hasCyrillic || hasMtError || isBanned;
-  
-  $('point').classList.toggle('err', hasError);
-  
-  var hintEl = $('latinHint');
-  
+  $('point').classList.toggle('err', hasError); 
+  var hintEl = $('latinHint');  
   // Приоритет подсказок: сначала запрещенная точка, потом пробел, потом кириллица
   if (isBanned) {
     hintEl.textContent = 'Эта точка питания не участвует в замерах!';
@@ -407,19 +401,15 @@ function pointInput() {
     hintEl.style.display = 'block';
   } else {
     hintEl.style.display = 'none';
-  }
-  
+  }  
   var q = $('pointList');
-  q.innerHTML = '';
-  
+  q.innerHTML = '';  
   // Если поле пустое или есть ошибка — список не показываем
-  if (!v || hasError) return;
-  
+  if (!v || hasError) return;  
   // Ищем совпадения
   var m = (dict.points || []).filter(function (p) { 
     return p.toUpperCase().indexOf(v) !== -1; 
-  });
-  
+  }); 
   // Умная сортировка (сначала те, что начинаются с введенных символов)
   m.sort(function(a, b) {
     var aStarts = a.toUpperCase().startsWith(v);
@@ -428,10 +418,8 @@ function pointInput() {
     if (!aStarts && bStarts) return 1;
     return a.localeCompare(b);
   });
-
   // Ограничиваем выдачу 10 вариантами
-  m = m.slice(0, 10);
-  
+  m = m.slice(0, 10);  
   // Отрисовываем список
   m.forEach(function (p) {
     var d = document.createElement('div');
@@ -440,6 +428,25 @@ function pointInput() {
     q.appendChild(d);
   });
 }
+
+function checkKassa() {
+  var k = $('kassa').value;
+  var kc = $('kassCount').value; 
+  var isInvalid = false;  
+  // Проверяем только если ОБА поля заполнены
+  if (k !== '' && kc !== '') {
+    var kassaNum = parseInt(k, 10);
+    var kassCountNum = parseInt(kc, 10);    
+    if (kassaNum > kassCountNum) {
+      isInvalid = true;
+    }
+  }  
+  $('kassa').classList.toggle('err', isInvalid);
+  $('kassaHint').style.display = isInvalid ? 'block' : 'none';  
+  return !isInvalid; // Возвращаем true, если всё ок (для экспорта)
+}  
+
+
   
 function pickPoint(p) {
   $('point').value = p;
@@ -508,6 +515,7 @@ function exportRec() {
     if (!dict.points || dict.points.indexOf(point) === -1) return status('Точки «' + point + '» нет в списке точек');
     
     if (!kassa) return status('Заполните «Номер кассы»');
+    if (!checkKassa()) return status('Номер кассы не может быть больше количества работающих касс!');
     
     var hadLap = lapFinal !== null;
     if (hadLap && !$('queue').value) return status('Заполните «Человек в очереди»');
