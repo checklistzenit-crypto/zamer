@@ -147,13 +147,13 @@ window.onerror = function (msg, src, line) {
 
 <div id="lockBar">Записи заблокированы администратором</div>
 
-<div id="main" class="disp">0:00:00,00</div>
+<div id="main" class="disp">0:00.00</div>
 <div id="lapWrap" style="visibility: hidden; height: 32px; margin-top: 4px; display: flex; justify-content: center; align-items: center;">
   <div style="position: relative; display: inline-flex; align-items: center;">
     <!-- Подпись Круг: -->
     <span class="row-label" style="position: absolute; right: 100%; margin-right: 10px; white-space: nowrap; margin-bottom: 0; margin-left: 0;">Круг:</span>
     <!-- Сам таймер -->
-    <div id="lap" class="disp-lap">0:00:00,00</div>
+    <div id="lap" class="disp-lap">0:00.00</div>
   </div>
 </div>
 
@@ -275,11 +275,21 @@ function fmt(ms) {
   function p(n) { return String(n).padStart(2, '0'); }
   return Math.floor(s / 3600) + ':' + p(Math.floor(s % 3600 / 60)) + ':' + p(s % 60);
 }
+
+  function fmtMs(ms) {
+  var cs = Math.floor(ms / 10);            // сотые секунды
+  var s = Math.floor(cs / 100);
+  function p(n) { return String(n).padStart(2, '0'); }
+  var cc = cs % 100, sec = s % 60, min = Math.floor(s / 60) % 60, h = Math.floor(s / 3600);
+  return h > 0 ? h + ':' + p(min) + ':' + p(sec) + '.' + p(cc)
+               :     min + ':' + p(sec) + '.' + p(cc);
+}
+  
 function status(t) { $('status').textContent = t; }
 
 function setDisplays() {
-  var mainText = mainRun ? fmt(Date.now() - mainStart)
-                         : (mainFinal !== null ? fmt(mainFinal) : '0:00:00');
+  var mainText = mainRun ? fmtMs(Date.now() - mainStart)
+                       : (mainFinal !== null ? fmtMs(mainFinal) : '0:00.00');
   if (mainText !== lastMainText) {
     $('main').textContent = mainText;
     lastMainText = mainText;
@@ -297,14 +307,14 @@ function setDisplays() {
   }
   
   if (showLap) {
-    var lapText = lapRun ? fmt(Date.now() - lapStart) : fmt(lapFinal);
+    var lapText = lapRun ? fmtMs(Date.now() - lapStart) : fmtMs(lapFinal);
     if (lapText !== lastLapText) {
       $('lap').textContent = lapText;
       lastLapText = lapText;
     }
   }
 }
-setInterval(setDisplays, 250);
+setInterval(setDisplays, 40);
 
 function start() {
   if (dict.locked) return status('Записи заблокированы администратором');
