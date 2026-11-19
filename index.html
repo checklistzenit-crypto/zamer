@@ -314,12 +314,18 @@ function setDisplays() {
     }
   }
 }
-setInterval(setDisplays, 40);
+
+var dispTimer = null;
+function dispRun(on) {
+  if (on && !dispTimer) dispTimer = setInterval(setDisplays, 40);
+  if (!on && dispTimer) { clearInterval(dispTimer); dispTimer = null; }
+}
 
 function start() {
   if (dict.locked) return status('Записи заблокированы администратором');
   if (mainRun || mainFinal !== null) return;
   mainRun = true; mainStart = Date.now(); startLocal = nowStr(new Date());
+  dispRun(true);
   setDisplays();
 }
 
@@ -331,6 +337,7 @@ function stop() {
   stopClicks.push(t);
   if (stopClicks.length >= 3) { stopClicks = []; resetAll(); return status('Форма сброшена'); }
   setDisplays();
+  dispRun(false);
 }
 
 function lap() {
