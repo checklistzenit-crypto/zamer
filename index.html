@@ -103,7 +103,7 @@ input.err{background:#590d0b}
 /* Чеки (Печать/Выдача) - чтобы не ломали капсулу */
 #katFields .toggles { background:transparent; padding:0; gap:8px; height:auto; }
 #katFields .tg { background:#222; padding:10px; border-radius:8px; height:42px; } /* Уменьшили с 44px */
-#katFields .tg.on { background:#005a8d; }
+#katFields .tg.on { background:#255010; }
 
 /* Кнопки действий */
 .btns{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px}
@@ -228,8 +228,8 @@ window.onerror = function (msg, src, line) {
       <div>
         <div class="row-label">Чеки</div>
         <div class="toggles">
-          <button class="tg" id="chkPrint" onclick="this.classList.toggle('on')">Печать</button>
-          <button class="tg" id="chkIssue" onclick="this.classList.toggle('on')">Выдача</button>
+          <button class="tg" id="chkPrint" onclick="togglePrint()">Печать</button>
+          <button class="tg" id="chkIssue" onclick="toggleIssue()">Выдача</button>
         </div>
       </div>
       <div>
@@ -446,7 +446,19 @@ function checkKassa() {
   return !isInvalid; // Возвращаем true, если всё ок (для экспорта)
 }  
 
-
+/* ---------- Чеки: выдача не бывает без печати ---------- */
+function togglePrint() {
+  var pr = $('chkPrint');
+  pr.classList.toggle('on');
+  // Печати нет — значит выдавать нечего
+  if (!pr.classList.contains('on')) $('chkIssue').classList.remove('on');
+}
+function toggleIssue() {
+  var is = $('chkIssue');
+  // Есть что выдать — значит это было напечатано
+  if (!is.classList.contains('on')) $('chkPrint').classList.add('on');
+  is.classList.toggle('on');
+}
   
 function pickPoint(p) {
   $('point').value = p;
