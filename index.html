@@ -442,9 +442,11 @@ function pointInput() {
 }
   
 function pickPoint(p) {
-  $('point').value = p; $('pointList').innerHTML = '';
-  $('point').classList.remove('err'); $('latinHint').style.display = 'none';
+  $('point').value = p;
+  $('pointList').innerHTML = '';
+  pointInput(); // <--- Эта строка запускает проверку заново
 }
+  
 function pick(el) {
   var group = el.parentElement.getAttribute('data-group');
   if (!group) {
