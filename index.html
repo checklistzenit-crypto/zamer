@@ -161,17 +161,18 @@ window.onerror = function (msg, src, line) {
   
   <!-- ================= ВКЛАДКА КРС ================= -->
   <div id="krsFields">
-    <!-- Ряд 1: Номер входной и Номер манишки -->
-    <div class="grid-2">
-      <div>
-        <div class="row-label">Номер входной</div>
-        <input id="entry" inputmode="numeric" maxlength="17" oninput="entryInput()">
-      </div>
-      <div>
-        <div class="row-label">Номер манишки</div>
-        <input id="bib" inputmode="numeric" maxlength="4" oninput="digits(this,4)">
-      </div>
+  <!-- Ряд 1: Номер входной и Номер манишки -->
+  <div class="grid-2">
+    <div>
+      <div class="row-label">Номер входной</div>
+      <input id="entry" inputmode="numeric" maxlength="17" oninput="entryInput()">
+      <div class="hint" id="entryHint">Номера нет в списке!</div>
     </div>
+    <div>
+      <div class="row-label">Номер манишки</div>
+      <input id="bib" inputmode="numeric" maxlength="4" oninput="digits(this,4)">
+    </div>
+  </div>
 
     <!-- Ряд 2: Тип контура и Тип осмотра -->
     <div class="grid-2" style="margin-top: 14px;">
@@ -345,6 +346,8 @@ function resetAll() {
   document.querySelectorAll('[data-group] .tg').forEach(function (b) { b.classList.remove('on'); });
   $('chkPrint').classList.remove('on'); $('chkIssue').classList.remove('on');
   $('pointList').innerHTML = ''; $('point').classList.remove('err');
+  $('entry').classList.remove('err'); 
+  $('entryHint').style.display = 'none';
   $('latinHint').style.display = 'none';
   setDisplays();
 }
@@ -353,7 +356,19 @@ function resetAll() {
 function digits(el, max) { el.value = el.value.replace(/\D/g, '').slice(0, max); }
 function entryInput() {
   var d = $('entry').value.replace(/\D/g, '').slice(0, 16);
-  $('entry').value = d ? 'G' + d : '';
+  var val = d ? 'G' + d : '';
+  $('entry').value = val;
+
+  // Визуальная проверка на существование во входных
+  var isInvalid = false;
+  if (val && dict.inputs && dict.inputs.length > 0) {
+    if (dict.inputs.indexOf(val) === -1) {
+      isInvalid = true;
+    }
+  }
+
+  $('entry').classList.toggle('err', isInvalid);
+  $('entryHint').style.display = isInvalid ? 'block' : 'none';
 }
 function pointInput() {
   var v = $('point').value.toUpperCase();
