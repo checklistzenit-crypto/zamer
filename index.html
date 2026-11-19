@@ -147,13 +147,13 @@ window.onerror = function (msg, src, line) {
 
 <div id="lockBar">Записи заблокированы администратором</div>
 
-<div id="main" class="disp">0:00:00</div>
+<div id="main" class="disp">0:00:00,00</div>
 <div id="lapWrap" style="visibility: hidden; height: 32px; margin-top: 4px; display: flex; justify-content: center; align-items: center;">
   <div style="position: relative; display: inline-flex; align-items: center;">
     <!-- Подпись Круг: -->
     <span class="row-label" style="position: absolute; right: 100%; margin-right: 10px; white-space: nowrap; margin-bottom: 0; margin-left: 0;">Круг:</span>
     <!-- Сам таймер -->
-    <div id="lap" class="disp-lap">0:00:00</div>
+    <div id="lap" class="disp-lap">0:00:00,00</div>
   </div>
 </div>
 
@@ -207,7 +207,7 @@ window.onerror = function (msg, src, line) {
         <div class="hint" id="latinHint">Переключите клавиатуру на английский!</div>
       </div>
       <div>
-        <div class="row-label"></div>
+        <div class="row-label">Номер кассы</div>
         <input id="kassa" inputmode="numeric" maxlength="2" oninput="digits(this,2); checkKassa()">
         <div class="hint" id="kassaHint">Номер больше числа работающих касс!</div>
       </div>
