@@ -57,7 +57,6 @@ body{
   position:fixed; top:0; left:0; right:0; max-width:480px; margin:0 auto;
   display:flex; z-index:10; padding:4px; background:#222; border-radius:999px;
   width:92%; box-sizing:border-box; 
-  /* Подняли табы на 4px (было 10px) */
   margin-top:calc(env(safe-area-inset-top) + 8px);
 }
 
@@ -65,8 +64,22 @@ body{
   flex:1; padding:12px; background:#082626; color:#fff; border:0; border-radius:999px;
   font-size:16px; font-family:inherit; font-weight:normal; text-align:center; transition:0.2s;
 }
-.tab.on.krs { background:#003c61; }
-.tab.on.kat { background:#255010; }
+
+/* Цвета активных вкладок */
+.tab.on.krs { background:#255010; }
+.tab.on.zls { background:#003c61; }
+.tab.on.chl { background:#4a0018; } /* Черно-бордовый по ТЗ */
+
+/* Анимация мигания для неактивных вкладок с запущенным таймером */
+@keyframes pulseTab {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+.tab.running:not(.on) {
+  animation: pulseTab 5s infinite ease-in-out; /* 2.5 сек туда, 2.5 обратно */
+}
 
 /* Плашка блокировки */
 #lockBar{display:none;background:#590d0b;color:#fff;text-align:center;padding:10px;border-radius:8px;margin-bottom:12px;font-size:14px}
@@ -140,19 +153,20 @@ window.onerror = function (msg, src, line) {
 };
 </script>
 
+<!-- Верхние табы -->
 <div class="tabs">
   <button class="tab on krs" id="tabKrs" onclick="switchMode('krs')">КРС</button>
-  <button class="tab kat" id="tabKat" onclick="switchMode('kat')">КЕЙТЕРИНГ</button>
+  <button class="tab zls" id="tabZls" onclick="switchMode('zls')">ЗЛС</button>
+  <button class="tab chl" id="tabChl" onclick="switchMode('chl')">ЧЛ</button>
 </div>
 
 <div id="lockBar">Записи заблокированы администратором</div>
 
 <div id="main" class="disp">0:00.00</div>
+<!-- Здесь позже будут 4 круга, пока оставляем один для теста -->
 <div id="lapWrap" style="visibility: hidden; height: 32px; margin-top: 4px; display: flex; justify-content: center; align-items: center;">
   <div style="position: relative; display: inline-flex; align-items: center;">
-    <!-- Подпись Круг: -->
     <span class="row-label" style="position: absolute; right: 100%; margin-right: 10px; white-space: nowrap; margin-bottom: 0; margin-left: 0;">Круг:</span>
-    <!-- Сам таймер -->
     <div id="lap" class="disp-lap">0:00.00</div>
   </div>
 </div>
@@ -161,20 +175,18 @@ window.onerror = function (msg, src, line) {
   
   <!-- ================= ВКЛАДКА КРС ================= -->
   <div id="krsFields">
-  <!-- Ряд 1: Номер входной и Номер манишки -->
-  <div class="grid-2">
-    <div>
-      <div class="row-label">Номер входной</div>
-      <input id="entry" inputmode="numeric" maxlength="17" oninput="entryInput()">
-      <div class="hint" id="entryHint">Номера нет в списке!</div>
+    <div class="grid-2">
+      <div>
+        <div class="row-label">Номер входной</div>
+        <input id="entry" inputmode="numeric" maxlength="17" oninput="entryInput()">
+        <div class="hint" id="entryHint">Номера нет в списке!</div>
+      </div>
+      <div>
+        <div class="row-label">Номер манишки</div>
+        <input id="bib" inputmode="numeric" maxlength="4" oninput="digits(this,4)">
+      </div>
     </div>
-    <div>
-      <div class="row-label">Номер манишки</div>
-      <input id="bib" inputmode="numeric" maxlength="4" oninput="digits(this,4)">
-    </div>
-  </div>
 
-    <!-- Ряд 2: Тип контура и Тип осмотра -->
     <div class="grid-2" style="margin-top: 14px;">
       <div>
         <div class="row-label">Тип контура</div>
@@ -190,37 +202,36 @@ window.onerror = function (msg, src, line) {
           <button class="tg" data-val="Ручная кладь" onclick="pick(this)">Кладь</button>
         </div>
       </div>
-    </div> <!-- ВАЖНО: Вот этот тег у тебя потерялся -->
+    </div>
 
-    <!-- Ряд 3: Примечание -->
     <div class="row-label" style="margin-top: 14px;">Примечание</div>
     <textarea id="noteK" rows="2" maxlength="300"></textarea>
   </div>
 
-  <!-- ================= ВКЛАДКА КЕЙТЕРИНГ ================= -->
-  <div id="katFields" style="display:none">
+  <!-- ================= ВКЛАДКА ЗЛС (КЕЙТЕРИНГ) ================= -->
+  <div id="zlsFields" style="display:none">
     <div class="grid-2">
       <div>
         <div class="row-label">Номер точки</div>
-        <input id="point" autocomplete="off" oninput="pointInput()" lang="en" autocapitalize="characters" spellcheck="false" pattern="[A-Za-z0-9\.\ \-]*">
-        <div id="pointList" class="suggest"></div>
-        <div class="hint" id="latinHint">Переключите клавиатуру на английский!</div>
+        <input id="zls-point" autocomplete="off" oninput="pointInput('zls')" lang="en" spellcheck="false">
+        <div id="zls-pointList" class="suggest"></div>
+        <div class="hint" id="zls-latinHint">Переключите клавиатуру на английский!</div>
       </div>
       <div>
         <div class="row-label">Номер кассы</div>
-        <input id="kassa" inputmode="numeric" maxlength="2" oninput="digits(this,2); checkKassa()">
-        <div class="hint" id="kassaHint">Номер больше числа работающих касс!</div>
+        <input id="zls-kassa" inputmode="numeric" maxlength="2" oninput="digits(this,2); checkKassa('zls')">
+        <div class="hint" id="zls-kassaHint">Номер больше числа работающих касс!</div>
       </div>
     </div>
 
     <div class="grid-2">
       <div>
         <div class="row-label">Количество работающих касс</div>
-        <input id="kassCount" inputmode="numeric" maxlength="2" oninput="digits(this,2); checkKassa()">
+        <input id="zls-kassCount" inputmode="numeric" maxlength="2" oninput="digits(this,2); checkKassa('zls')">
       </div>
       <div>
         <div class="row-label">Количество работающего персонала</div>
-        <input id="staff" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
+        <input id="zls-staff" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
       </div>
     </div>
 
@@ -228,22 +239,63 @@ window.onerror = function (msg, src, line) {
       <div>
         <div class="row-label">Чеки</div>
         <div class="toggles">
-          <button class="tg" id="chkPrint" onclick="togglePrint()">Печать</button>
-          <button class="tg" id="chkIssue" onclick="toggleIssue()">Выдача</button>
+          <button class="tg" id="zls-chkPrint" onclick="togglePrint('zls')">Печать</button>
+          <button class="tg" id="zls-chkIssue" onclick="toggleIssue('zls')">Выдача</button>
         </div>
       </div>
       <div>
         <div class="row-label">Человек в очереди</div>
-        <input id="queue" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
+        <input id="zls-queue" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
       </div>
     </div>
 
     <div class="row-label" style="margin-top:8px;">Примечание</div>
-    <textarea id="noteKt" rows="2" maxlength="400"></textarea>
+    <textarea id="zls-noteKt" rows="2" maxlength="400"></textarea>
   </div>
 
-</div> 
-<!-- ЗАКРЫТИЕ form-container: теперь он охватывает ОБЕ вкладки целиком -->
+  <!-- ================= ВКЛАДКА ЧЛ (МОРОЖЕНОЕ) ================= -->
+  <div id="chlFields" style="display:none">
+    <div class="grid-2">
+      <div>
+        <div class="row-label">Номер точки</div>
+        <input id="chl-point" autocomplete="off" oninput="pointInput('chl')" lang="en" spellcheck="false">
+        <div id="chl-pointList" class="suggest"></div>
+        <div class="hint" id="chl-latinHint">Переключите клавиатуру на английский!</div>
+      </div>
+      <div>
+        <!-- Тут пусто, так как в ЧЛ убрали кассы по ТЗ -->
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="row-label">Количество работающего персонала</div>
+        <input id="chl-staff" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
+      </div>
+      <div>
+        <div class="row-label">Человек в очереди</div>
+        <input id="chl-queue" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="row-label">Чеки</div>
+        <div class="toggles">
+          <button class="tg" id="chl-chkPrint" onclick="togglePrint('chl')">Печать</button>
+          <button class="tg" id="chl-chkIssue" onclick="toggleIssue('chl')">Выдача</button>
+        </div>
+      </div>
+      <div>
+        <!-- Тут пусто -->
+      </div>
+    </div>
+
+    <div class="row-label" style="margin-top:8px;">Примечание</div>
+    <textarea id="chl-noteKt" rows="2" maxlength="400"></textarea>
+  </div>
+
+</div>
 
 <div class="btns">
   <button class="btn" id="bStart" onclick="start()">СТАРТ</button>
@@ -259,6 +311,14 @@ function $(id) { return document.getElementById(id); }
 
 var dict = { locked: false, points: [], operators: {}, inputs: [] };
 var mode = 'krs';
+
+// Теперь состояние хранится для каждой вкладки отдельно
+var states = {
+  krs: { run: false, start: 0, final: null },
+  zls: { run: false, start: 0, final: null },
+  chl: { run: false, start: 0, final: null }
+};
+  
 var mainRun = false, mainStart = 0, mainFinal = null;
 var lapRun = false, lapStart = 0, lapFinal = null;
 var startLocal = null, lapLocal = null, stopLocal = null;
@@ -348,11 +408,22 @@ function lap() {
 
 function switchMode(m) {
   if (m === mode) return;
-  mode = m; resetAll();
-  $('krsFields').style.display = m === 'krs' ? 'block' : 'none';
-  $('katFields').style.display = m === 'kat' ? 'block' : 'none';
+  mode = m;
+  
+  // Скрываем все вкладки
+  $('krsFields').style.display = 'none';
+  $('zlsFields').style.display = 'none';
+  $('chlFields').style.display = 'none';
+  
+  // Показываем нужную
+  $(m + 'Fields').style.display = 'block';
+  
+  // Обновляем кнопки табов
   $('tabKrs').classList.toggle('on', m === 'krs');
-  $('tabKat').classList.toggle('on', m === 'kat');
+  $('tabZls').classList.toggle('on', m === 'zls');
+  $('tabChl').classList.toggle('on', m === 'chl');
+  
+  setDisplays(); // Обновляем таймер на экране
 }
 
 function resetAll() {
