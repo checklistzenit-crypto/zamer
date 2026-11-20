@@ -21,18 +21,15 @@ body{
 }
 
 .form-container {
-  /* Уменьшили высоту, так как поля стали тоньше */
-  min-height: 330px; 
+  /* Жестко фиксируем минимальную высоту, чтобы кнопки всегда были на одном месте */
+  min-height: 350px; 
+  margin-top: 20px;
 }
 
-#krsFields {
-  /* Оставляем отступ для КРС (место под круг уже зарезервировано в HTML) */
-  margin-top: 20px;  
+/* Убираем индивидуальные отступы, чтобы сетка была ровной */
+#krsFields, #zlsFields, #chlFields {
+  margin-top: 0;  
 }
-
-#katFields {
-  margin-top: 20px; 
-}  
 
 /* Таймеры */
 .disp{
@@ -253,8 +250,9 @@ window.onerror = function (msg, src, line) {
     <textarea id="zls-noteKt" rows="2" maxlength="400"></textarea>
   </div>
 
-  <!-- ================= ВКЛАДКА ЧЛ (МОРОЖЕНОЕ) ================= -->
+   <!-- ================= ВКЛАДКА ЧЛ (МОРОЖЕНОЕ) ================= -->
   <div id="chlFields" style="display:none">
+    <!-- Ряд 1: Точка и Очередь -->
     <div class="grid-2">
       <div>
         <div class="row-label">Номер точки</div>
@@ -263,21 +261,12 @@ window.onerror = function (msg, src, line) {
         <div class="hint" id="chl-latinHint">Переключите клавиатуру на английский!</div>
       </div>
       <div>
-        <!-- Тут пусто, так как в ЧЛ убрали кассы по ТЗ -->
-      </div>
-    </div>
-
-    <div class="grid-2">
-      <div>
-        <div class="row-label">Количество работающего персонала</div>
-        <input id="chl-staff" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
-      </div>
-      <div>
         <div class="row-label">Человек в очереди</div>
         <input id="chl-queue" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
       </div>
     </div>
 
+    <!-- Ряд 2: Чеки и Персонал -->
     <div class="grid-2">
       <div>
         <div class="row-label">Чеки</div>
@@ -287,15 +276,15 @@ window.onerror = function (msg, src, line) {
         </div>
       </div>
       <div>
-        <!-- Тут пусто -->
+        <div class="row-label">Количество работающего персонала</div>
+        <input id="chl-staff" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
       </div>
     </div>
 
+    <!-- Ряд 3: Примечание -->
     <div class="row-label" style="margin-top:8px;">Примечание</div>
     <textarea id="chl-noteKt" rows="2" maxlength="400"></textarea>
   </div>
-
-</div>
 
 <div class="btns">
   <button class="btn" id="bStart" onclick="start()">СТАРТ</button>
