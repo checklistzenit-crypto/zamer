@@ -15,14 +15,13 @@
 
 body{
   margin:0 auto; max-width:480px; background:#000; color:#fff;
-  /* Подняли таймер на 10px (было 80px) */
-  padding:calc(env(safe-area-inset-top) + 70px) 16px 20px;
+  /* Отступ снизу 160px нужен, чтобы кнопки не перекрывали контент */
+  padding: calc(env(safe-area-inset-top) + 70px) 16px 160px;
   font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 .form-container {
-  /* Жестко фиксируем минимальную высоту, чтобы кнопки всегда были на одном месте */
-  min-height: 350px; 
+  min-height: auto; /* Убрали жесткую высоту, так как кнопки теперь фиксированы */
   margin-top: 20px;
 }
 
@@ -35,7 +34,7 @@ body{
 .disp{
   font-size:72px; text-align:center; color:#fff; font-variant-numeric:tabular-nums; 
   line-height:1.1; margin-top:8px; font-weight:400;
-  transition: font-size 0.3s ease; /* Добавили плавность */
+  transition: font-size 0.3s ease; 
 }
 
 /* Класс для уменьшения главного таймера при появлении круга */
@@ -43,7 +42,7 @@ body{
   font-size: 48px; 
 }
 
-/* Таймер круга — ровно 27px по ТЗ */
+/* Таймер круга */
 .disp-lap{
   font-size:27px; text-align:center; color:#fff; font-variant-numeric:tabular-nums; 
   line-height:1.1; margin: 0; font-weight:300;
@@ -67,15 +66,14 @@ body{
 .tab.on.zls { background:#003c61; }
 .tab.on.chl { background:#4a0018; } /* Черно-бордовый по ТЗ */
 
-/* Анимация мигания для неактивных вкладок с запущенным таймером */
+/* Анимация мигания */
 @keyframes pulseTab {
   0% { opacity: 1; }
   50% { opacity: 0.3; }
   100% { opacity: 1; }
 }
-
 .tab.running:not(.on) {
-  animation: pulseTab 5s infinite ease-in-out; /* 2.5 сек туда, 2.5 обратно */
+  animation: pulseTab 5s infinite ease-in-out;
 }
 
 /* Плашка блокировки */
@@ -92,7 +90,7 @@ input,textarea{
   background:#333333; color:#fff; border:0; border-radius:8px;
   padding:12px; font-size:16px; font-family:inherit; text-align:center;
   width:100%; box-sizing:border-box; 
-  height:42px; /* Уменьшили с 44px */
+  height:42px; 
 }
 textarea{text-align:left; resize:none; height:50px; min-height:50px; padding:10px 12px;}
 input.err{background:#590d0b}
@@ -100,7 +98,7 @@ input.err{background:#590d0b}
 /* Переключатели (Контур, Осмотр) - Мини-табы */
 .toggles{
   display:flex; background:#222; border-radius:999px; padding:3px; 
-  height:42px; /* Уменьшили с 44px */
+  height:42px; 
   box-sizing:border-box
 }
 .tg{
@@ -110,35 +108,58 @@ input.err{background:#590d0b}
 }
 .tg.on{background:#003c61}
 
-/* Чеки (Печать/Выдача) - чтобы не ломали капсулу */
-#katFields .toggles { background:transparent; padding:0; gap:8px; height:auto; }
-#katFields .tg { background:#222; padding:10px; border-radius:8px; height:42px; } /* Уменьшили с 44px */
-#katFields .tg.on { background:#255010; }
+/* Чеки (Печать/Выдача) - для ЗЛС и ЧЛ */
+#zlsFields .toggles, #chlFields .toggles { background:transparent; padding:0; gap:8px; height:auto; }
+#zlsFields .tg, #chlFields .tg { background:#222; padding:10px; border-radius:8px; height:42px; } 
+#zlsFields .tg.on, #chlFields .tg.on { background:#255010; }
 
-/* Кнопки действий */
-.btns{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px}
+/* КНОПКИ ДЕЙСТВИЙ - ФИКСИРОВАНЫ ВНИЗУ */
+.btns{
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom) + 10px); 
+  left: 0; right: 0;
+  max-width: 480px;
+  margin: 0 auto;
+  width: calc(100% - 32px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  z-index: 10;
+}
+
 .btn{
   padding:20px 6px; border:0; border-radius:999px; font-size:22px;
   font-family:inherit; font-weight:500; letter-spacing:0.5px;
+  transition: transform 0.1s ease, opacity 0.1s ease;
 }
 #bStart{background:#132914;color:#0f0}
 #bLap{background:#1e2b32;color:#00c8ff}
 #bExport{background:#262626;color:#fff}
 #bStop{background:#2c122a;color:#ff01ed}
 
-  /* Эффект нажатия на кнопки */
-.btn {
-  transition: transform 0.1s ease, opacity 0.1s ease;
-}
 .btn:active, .tab:active, .tg:active {
   transform: scale(0.95);
   opacity: 0.8;
 }
+
+/* Плашка статуса - фиксирована над кнопками */
+#status{
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom) + 140px); 
+  left: 0; right: 0;
+  max-width: 480px;
+  margin: 0 auto;
+  text-align: center;
+  color: #8a8a8a;
+  font-size: 13px;
+  z-index: 10;
+  pointer-events: none; /* Чтобы не мешала нажимать кнопки сквозь неё */
+}
+
 /* Подсказки */
 .hint{display:none;color:#ff6b6b;font-size:11px;margin-top:4px}
 .suggest{max-height:150px;overflow:auto;border-radius:6px;margin-top:2px}
 .suggest div{background:#262626;padding:10px;text-align:center;border-bottom:1px solid #000}
-#status{text-align:center;color:#8a8a8a;font-size:13px;margin-top:12px;min-height:16px}
 </style>
 </head>
 <body>
