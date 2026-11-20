@@ -109,8 +109,24 @@ input.err{background:#590d0b}
 .tg.on{background:#255010}
 
 /* Чеки (Печать/Выдача) - для ЗЛС и ЧЛ */
-#zlsFields .toggles, #chlFields .toggles { background:transparent; padding:0; gap:8px; height:auto; }
-#zlsFields .tg, #chlFields .tg { background:#222; padding:10px; align-items: end; border-radius:8px; height:42px; } 
+#zlsFields .toggles, #chlFields .toggles { 
+  background: transparent; 
+  padding: 0; 
+  gap: 8px; 
+  height: auto; 
+  display: flex; /* Гарантируем flex-контейнер */
+}
+
+#zlsFields .tg, #chlFields .tg { 
+  background: #222; 
+  border-radius: 8px; 
+  height: 42px; /* Оставляем высоту как у полей ввода */
+  padding: 0; /* УБРАЛИ padding: 10px, из-за которого текст ехал вниз */
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+} 
+
 #zlsFields .tg.on { background: #003c61; } /* Синий ЗЛС */
 #chlFields .tg.on { background: #4a0018; } /* Бордовый ЧЛ */
 
@@ -290,8 +306,8 @@ window.onerror = function (msg, src, line) {
       </div>
     </div>
 
-    <!-- Ряд 2: Чеки и Персонал -->
-    <div class="grid-2">
+<!-- Ряд 2: Чеки (слева) и Количество персонала (справа) -->
+    <div class="grid-2" style="align-items: end;">
       <div>
         <div class="row-label">Чеки</div>
         <div class="toggles">
@@ -304,11 +320,6 @@ window.onerror = function (msg, src, line) {
         <input id="chl-staff" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
       </div>
     </div>
-
-    <!-- Ряд 3: Примечание -->
-    <div class="row-label" style="margin-top:8px;">Примечание</div>
-    <textarea id="chl-noteKt" rows="2" maxlength="400"></textarea>
-  </div>
 
 <div class="btns">
   <button class="btn" id="bStart" onclick="start()">СТАРТ</button>
