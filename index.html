@@ -106,17 +106,19 @@ input.err{background:#590d0b}
   font-size:12px; font-weight:normal; text-align:center; font-family:inherit;
   transition:0.2s; padding:0; display:flex; align-items:center; justify-content:center;
 }
-.tg.on{background:#003c61}
+.tg.on{background:#255010}
 
 /* Чеки (Печать/Выдача) - для ЗЛС и ЧЛ */
 #zlsFields .toggles, #chlFields .toggles { background:transparent; padding:0; gap:8px; height:auto; }
-#zlsFields .tg, #chlFields .tg { background:#222; padding:10px; border-radius:8px; height:42px; } 
-#zlsFields .tg.on, #chlFields .tg.on { background:#255010; }
+#zlsFields .tg, #chlFields .tg { background:#222; padding:10px; align-items: end; border-radius:8px; height:42px; } 
+#zlsFields .tg.on { background: #003c61; } /* Синий ЗЛС */
+#chlFields .tg.on { background: #4a0018; } /* Бордовый ЧЛ */
 
-/* КНОПКИ ДЕЙСТВИЙ - ФИКСИРОВАНЫ ВНИЗУ */
+/* КНОПКИ ДЕЙСТВИЙ */
 .btns{
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom) + 10px); 
+  /* Опустили кнопки максимально низко, оставив только место под текст статуса */
+  bottom: calc(env(safe-area-inset-bottom) + 20px); 
   left: 0; right: 0;
   max-width: 480px;
   margin: 0 auto;
@@ -142,10 +144,11 @@ input.err{background:#590d0b}
   opacity: 0.8;
 }
 
-/* Плашка статуса - фиксирована над кнопками */
+/* Плашка статуса */
 #status{
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom) + 140px); 
+  /* Прижали к самому низу экрана (под кнопками) */
+  bottom: calc(env(safe-area-inset-bottom) + 2px); 
   left: 0; right: 0;
   max-width: 480px;
   margin: 0 auto;
@@ -153,7 +156,7 @@ input.err{background:#590d0b}
   color: #8a8a8a;
   font-size: 13px;
   z-index: 10;
-  pointer-events: none; /* Чтобы не мешала нажимать кнопки сквозь неё */
+  pointer-events: none;
 }
 
 /* Подсказки */
