@@ -125,6 +125,7 @@ input.err{background:#590d0b}
   display: flex; 
   align-items: center; 
   justify-content: center;
+  line-height: 1; /* Убираем смещение текста вниз */
 } 
 
 #zlsFields .tg.on { background: #003c61; } /* Синий ЗЛС */
@@ -320,7 +321,8 @@ window.onerror = function (msg, src, line) {
         <input id="chl-staff" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
       </div>
     </div>
-
+  </div>
+  
 <div class="btns">
   <button class="btn" id="bStart" onclick="start()">СТАРТ</button>
   <button class="btn" id="bLap" onclick="lap()">КРУГ</button>
