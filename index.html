@@ -15,8 +15,7 @@
 
 body{
   margin:0 auto; max-width:480px; background:#000; color:#fff;
-  /* Отступ снизу 160px нужен, чтобы кнопки не перекрывали контент */
-  padding: calc(env(safe-area-inset-top) + 70px) 16px 160px;
+  padding: calc(env(safe-area-inset-top) + 70px) 16px 220px;
   font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -321,7 +320,10 @@ window.onerror = function (msg, src, line) {
         <input id="chl-staff" inputmode="numeric" maxlength="2" oninput="digits(this,2)">
       </div>
     </div>
+    <div class="row-label" style="margin-top:8px;">Примечание</div>
+    <textarea id="chl-noteKt" rows="2" maxlength="400"></textarea>  
   </div>
+</div>
   
 <div class="btns">
   <button class="btn" id="bStart" onclick="start()">СТАРТ</button>
