@@ -134,7 +134,7 @@ input.err{background:#590d0b}
 .btns{
   position: fixed;
   /* Опустили кнопки максимально низко, оставив только место под текст статуса */
-  bottom: calc(env(safe-area-inset-bottom) + 10px); 
+  bottom: calc(env(safe-area-inset-bottom) + 0px); 
   left: 0; right: 0;
   max-width: 480px;
   margin: 0 auto;
@@ -164,17 +164,35 @@ input.err{background:#590d0b}
 #status{
   position: fixed;
   /* Прижали к самому низу экрана (под кнопками) */
-  bottom: calc(env(safe-area-inset-bottom) - 10px); 
+  bottom: calc(env(safe-area-inset-bottom) - 20px); 
   left: 0; right: 0;
   max-width: 480px;
   margin: 0 auto;
   text-align: center;
   color: #8a8a8a;
-  font-size: 10px;
+  font-size: 9px;
   z-index: 10;
   pointer-events: none;
 }
-
+/* Блокировка альбомного режима */
+@media screen and (orientation: landscape) {
+  body::before {
+    content: "Пожалуйста, поверните устройство вертикально (портретный режим)";
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw; height: 100vh;
+    background: #000;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 30px;
+    padding: 20px;
+    z-index: 99999; /* Поверх всех элементов */
+  }
+}
+  
 /* Подсказки */
 .hint{display:none;color:#ff6b6b;font-size:11px;margin-top:4px}
 .suggest{max-height:150px;overflow:auto;border-radius:6px;margin-top:2px}
