@@ -181,14 +181,22 @@ input.err{background:#590d0b}
   pointer-events: none;
 }
 
-  /* Сетка для 4 кругов */
 /* Сетка для 4 кругов */
 .laps-container {
-  display: none; 
+  display: grid; 
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-top: 5px;
-  margin-bottom: 0px;
+  max-height: 0; /* Изначально сжат */
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+  margin: 0;
+}
+.laps-container.active {
+  max-height: 150px; /* Раскрывается при появлении кругов */
+  opacity: 1;
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
 .lap-item {
   display: flex; 
@@ -201,7 +209,7 @@ input.err{background:#590d0b}
   font-size: 13px;
   color: #aaa;
 }
-/* Уменьшили шрифт на 20% (было 27px, стало 21px) */
+/* Уменьшили шрифт на 2px (было 27px, стало 25px) */
 .disp-lap { 
   font-size: 25px; 
   text-align: right; 
@@ -467,20 +475,24 @@ function setDisplays() {
   // 3. Обновление блоков кругов
   var lapsContainer = $('lapsContainer');
   var formContainer = document.querySelector('.form-container');
+  
   if (mode === 'krs') {
      lapsContainer.style.display = 'none';
      $('main').classList.remove('shrink');
-     formContainer.style.marginTop = '50px'; // Стандартный отступ
+     formContainer.style.marginTop = '50px';
   } else {
+     lapsContainer.style.display = 'grid';
+     // Если есть хотя бы один круг, показываем сетку плавно
      if (state.laps.length > 0) {
-         lapsContainer.style.display = 'grid';
+         lapsContainer.classList.add('active');
          $('main').classList.add('shrink');
-         formContainer.style.marginTop = '20px'; // УМЕНЬШЕННЫЙ отступ, когда есть круги
+         formContainer.style.marginTop = '20px';
      } else {
-         lapsContainer.style.display = 'none';
+         lapsContainer.classList.remove('active');
          $('main').classList.remove('shrink');
-         formContainer.style.marginTop = '50px'; // Стандартный отступ, когда кругов нет
+         formContainer.style.marginTop = '50px';
      }
+     // ... (дальше идет цикл отрисовки кругов, его не трогаем)
 
      for (var i = 0; i < 4; i++) {
          var box = $('lapBox' + (i+1));
@@ -570,8 +582,8 @@ function stop() {
   stopClicks.push(t);
   if (stopClicks.length >= 3) { 
     stopClicks = []; 
-    resetAll(false); 
-    return status('Все формы сброшены'); 
+    resetAll(false, mode); // Передаем текущую вкладку
+    return status('Форма сброшена'); 
   }
   
   setDisplays();
@@ -595,36 +607,43 @@ function switchMode(m) {
   setDisplays(); 
 }
 
-function resetAll(keepFields) {
-  // Сбрасываем таймеры на ВСЕХ вкладках
-  ['krs', 'zls', 'chl'].forEach(function(m) {
-    states[m] = { mainRun: false, mainStart: 0, mainFinal: null, startLocal: null, stopLocal: null, laps: [] };
-  });
+function resetAll(keepFields, targetMode) {
+  if (!targetMode) targetMode = mode; // Если вкладка не указана, берем текущую
+  
+  // Сбрасываем таймер ТОЛЬКО для выбранной вкладки
+  states[targetMode] = { mainRun: false, mainStart: 0, mainFinal: null, startLocal: null, stopLocal: null, laps: [] };
   
   if (!keepFields) {
-    // ПОЛНАЯ ОЧИСТКА (вызывается при 3х СТОП)
-    document.querySelectorAll('input, textarea').forEach(function(e) { e.value = ''; });
-    localStorage.removeItem('saved_entry');
-    localStorage.removeItem('saved_point_zls');
-    localStorage.removeItem('saved_point_chl');
+    // ПОЛНАЯ ОЧИСТКА (3х СТОП)
+    if (targetMode === 'krs') {
+      $('entry').value = ''; $('bib').value = ''; $('noteK').value = '';
+      localStorage.removeItem('saved_entry');
+    } else if (targetMode === 'zls') {
+      $('zls-point').value = ''; $('zls-kassa').value = ''; $('zls-kassCount').value = ''; 
+      $('zls-staff').value = ''; $('zls-queue').value = ''; $('zls-noteKt').value = '';
+      localStorage.removeItem('saved_point_zls');
+    } else if (targetMode === 'chl') {
+      $('chl-point').value = ''; $('chl-staff').value = ''; $('chl-queue').value = ''; $('chl-noteKt').value = '';
+      localStorage.removeItem('saved_point_chl');
+    }
   } else {
-    // ЧАСТИЧНАЯ ОЧИСТКА (вызывается при успешном ЭКСПОРТЕ)
-    // Стираем всё, КРОМЕ полей entry и point
-    $('bib').value = '';
-    $('noteK').value = '';
-    $('zls-kassa').value = '';
-    $('zls-kassCount').value = '';
-    $('zls-staff').value = '';
-    $('zls-queue').value = '';
-    $('zls-noteKt').value = '';
-    $('chl-staff').value = '';
-    $('chl-queue').value = '';
-    $('chl-noteKt').value = '';
+    // ЧАСТИЧНАЯ ОЧИСТКА (после ЭКСПОРТА)
+    if (targetMode === 'krs') {
+      $('bib').value = ''; $('noteK').value = '';
+    } else if (targetMode === 'zls') {
+      $('zls-kassa').value = ''; $('zls-kassCount').value = ''; 
+      $('zls-staff').value = ''; $('zls-queue').value = ''; $('zls-noteKt').value = '';
+    } else if (targetMode === 'chl') {
+      $('chl-staff').value = ''; $('chl-queue').value = ''; $('chl-noteKt').value = '';
+    }
   }
-  document.querySelectorAll('.tg').forEach(function(b) { b.classList.remove('on'); });
-  document.querySelectorAll('.hint').forEach(function(h) { h.style.display = 'none'; });
-  document.querySelectorAll('.err').forEach(function(e) { e.classList.remove('err'); });
-  
+
+  // Снимаем активные тоглы и подсказки ТОЛЬКО на этой вкладке
+  var container = targetMode === 'krs' ? $('krsFields') : (targetMode === 'zls' ? $('zlsFields') : $('chlFields'));
+  container.querySelectorAll('.tg').forEach(function(b) { b.classList.remove('on'); });
+  container.querySelectorAll('.hint').forEach(function(h) { h.style.display = 'none'; });
+  container.querySelectorAll('.err').forEach(function(e) { e.classList.remove('err'); });
+
   dispRun(false);
   setDisplays();
 }
@@ -817,7 +836,7 @@ function exportRec() {
   }
   
   var q = getQ(); q.push(rec); saveQ(q);
-  resetAll(true);
+  resetAll(true, mode); // Передаем текущую вкладку
   status('Отправка…');
   sync();
 }
