@@ -174,6 +174,30 @@ input.err{background:#590d0b}
   z-index: 10;
   pointer-events: none;
 }
+
+  /* Сетка для 4 кругов */
+.laps-container {
+  display: none; /* Изначально скрыт */
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+.lap-box {
+  background: #1c1c1c;
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+  visibility: hidden; /* Место зарезервировано, но невидимо */
+}
+.lap-box .row-label {
+  margin-bottom: 4px;
+  text-align: center;
+  font-size: 11px;
+}
+/* Уменьшаем главный таймер, если есть круги */
+.disp.shrink { font-size: 40px; }
+
 /* Блокировка альбомного режима */
 @media screen and (orientation: landscape) {
   body::before {
@@ -218,11 +242,26 @@ window.onerror = function (msg, src, line) {
 <div id="lockBar">Записи заблокированы администратором</div>
 
 <div id="main" class="disp">0:00.00</div>
-<!-- Здесь позже будут 4 круга, пока оставляем один для теста -->
-<div id="lapWrap" style="visibility: hidden; height: 32px; margin-top: 4px; display: flex; justify-content: center; align-items: center;">
-  <div style="position: relative; display: inline-flex; align-items: center;">
-    <span class="row-label" style="position: absolute; right: 100%; margin-right: 10px; white-space: nowrap; margin-bottom: 0; margin-left: 0;">Круг:</span>
-    <div id="lap" class="disp-lap">0:00.00</div>
+
+<!-- Контейнер для 4 кругов -->
+<div id="lapsContainer" class="laps-container">
+  <!-- Ряд 1 -->
+  <div class="lap-box" id="lapBox1">
+    <span class="row-label">Круг 1</span>
+    <div id="lapDisp1" class="disp-lap">0:00.00</div>
+  </div>
+  <div class="lap-box" id="lapBox3">
+    <span class="row-label">Круг 3</span>
+    <div id="lapDisp3" class="disp-lap">0:00.00</div>
+  </div>
+  <!-- Ряд 2 -->
+  <div class="lap-box" id="lapBox2">
+    <span class="row-label">Круг 2</span>
+    <div id="lapDisp2" class="disp-lap">0:00.00</div>
+  </div>
+  <div class="lap-box" id="lapBox4">
+    <span class="row-label">Круг 4</span>
+    <div id="lapDisp4" class="disp-lap">0:00.00</div>
   </div>
 </div>
 
@@ -358,32 +397,24 @@ function $(id) { return document.getElementById(id); }
 var dict = { locked: false, points: [], operators: {}, inputs: [] };
 var mode = 'krs';
 
-// Теперь состояние хранится для каждой вкладки отдельно
+// Хранилище состояний для каждой вкладки
 var states = {
-  krs: { run: false, start: 0, final: null },
-  zls: { run: false, start: 0, final: null },
-  chl: { run: false, start: 0, final: null }
+  krs: { mainRun: false, mainStart: 0, mainFinal: null, startLocal: null, stopLocal: null, laps: [] },
+  zls: { mainRun: false, mainStart: 0, mainFinal: null, startLocal: null, stopLocal: null, laps: [] },
+  chl: { mainRun: false, mainStart: 0, mainFinal: null, startLocal: null, stopLocal: null, laps: [] }
 };
-  
-var mainRun = false, mainStart = 0, mainFinal = null;
-var lapRun = false, lapStart = 0, lapFinal = null;
-var startLocal = null, lapLocal = null, stopLocal = null;
+
 var stopClicks = [];
-var lastMainText = null, lastLapText = null, lastLapVisible = null;
+var lastMainText = null;
   
 function nowStr(d) {
   function p(n) { return String(n).padStart(2, '0'); }
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' '
        + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
 }
-function fmt(ms) {
-  var s = Math.max(0, Math.floor(ms / 1000));
-  function p(n) { return String(n).padStart(2, '0'); }
-  return Math.floor(s / 3600) + ':' + p(Math.floor(s % 3600 / 60)) + ':' + p(s % 60);
-}
 
-  function fmtMs(ms) {
-  var cs = Math.floor(ms / 10);            // сотые секунды
+function fmtMs(ms) {
+  var cs = Math.floor(ms / 10);            
   var s = Math.floor(cs / 100);
   function p(n) { return String(n).padStart(2, '0'); }
   var cc = cs % 100, sec = s % 60, min = Math.floor(s / 60) % 60, h = Math.floor(s / 3600);
@@ -394,216 +425,271 @@ function fmt(ms) {
 function status(t) { $('status').textContent = t; }
 
 function setDisplays() {
-  var mainText = mainRun ? fmtMs(Date.now() - mainStart)
-                       : (mainFinal !== null ? fmtMs(mainFinal) : '0:00.00');
-  if (mainText !== lastMainText) {
-    $('main').textContent = mainText;
-    lastMainText = mainText;
-  }
-
-  var showLap = mode === 'kat' && (lapRun || lapFinal !== null);
-  
-  if (showLap !== lastLapVisible) {
-    $('lapWrap').style.visibility = showLap ? 'visible' : 'hidden';
-    
-    // ВОТ ОНА — НУЖНАЯ СТРОКА. Она добавляет класс .shrink главному таймеру
-    $('main').classList.toggle('shrink', showLap); 
-    
-    lastLapVisible = showLap;
-  }
-  
-  if (showLap) {
-    var lapText = lapRun ? fmtMs(Date.now() - lapStart) : fmtMs(lapFinal);
-    if (lapText !== lastLapText) {
-      $('lap').textContent = lapText;
-      lastLapText = lapText;
+  // 1. Мигание неактивных вкладок
+  ['krs', 'zls', 'chl'].forEach(function(m) {
+    var tab = $('tab' + m.toUpperCase());
+    if (states[m].mainRun && mode !== m) {
+      tab.classList.add('running');
+    } else {
+      tab.classList.remove('running');
     }
+  });
+
+  var state = states[mode];
+  
+  // 2. Обновление главного таймера
+  var mainText = state.mainRun ? fmtMs(Date.now() - state.mainStart)
+                               : (state.mainFinal !== null ? fmtMs(state.mainFinal) : '0:00.00');
+  if ($('main').textContent !== mainText) $('main').textContent = mainText;
+
+  // 3. Обновление блоков кругов
+  var lapsContainer = $('lapsContainer');
+  if (mode === 'krs') {
+     lapsContainer.style.display = 'none';
+     $('main').classList.remove('shrink');
+  } else {
+     if (state.laps.length > 0) {
+         lapsContainer.style.display = 'grid';
+         $('main').classList.add('shrink');
+     } else {
+         lapsContainer.style.display = 'none';
+         $('main').classList.remove('shrink');
+     }
+
+     for (var i = 0; i < 4; i++) {
+         var box = $('lapBox' + (i+1));
+         var disp = $('lapDisp' + (i+1));
+         
+         if (state.laps[i]) {
+             box.style.visibility = 'visible';
+             var lapMs = state.laps[i].end ? (state.laps[i].end - state.laps[i].start) : (Date.now() - state.laps[i].start);
+             disp.textContent = fmtMs(lapMs);
+             
+             if (!state.laps[i].end && state.mainRun) {
+                 disp.style.color = '#00c8ff';
+             } else {
+                 disp.style.color = '#fff';
+             }
+         } else {
+             box.style.visibility = 'hidden';
+         }
+     }
   }
 }
 
 var dispTimer = null;
 function dispRun(on) {
-  if (on && !dispTimer) dispTimer = setInterval(setDisplays, 40);
-  if (!on && dispTimer) { clearInterval(dispTimer); dispTimer = null; }
+  // Проверяем, есть ли хоть один запущенный таймер
+  var anyRunning = states.krs.mainRun || states.zls.mainRun || states.chl.mainRun;
+  
+  if (anyRunning && !dispTimer) {
+    dispTimer = setInterval(setDisplays, 40);
+  } else if (!anyRunning && dispTimer) { 
+    clearInterval(dispTimer); 
+    dispTimer = null; 
+  }
 }
 
 function start() {
   if (dict.locked) return status('Записи заблокированы администратором');
-  if (mainRun || mainFinal !== null) return;
-  mainRun = true; mainStart = Date.now(); startLocal = nowStr(new Date());
+  var state = states[mode];
+  if (state.mainRun || state.mainFinal !== null) return;
+  
+  state.mainRun = true; 
+  state.mainStart = Date.now(); 
+  state.startLocal = nowStr(new Date());
+  
   dispRun(true);
+  setDisplays();
+}
+
+function lap() {
+  var state = states[mode];
+  if (mode === 'krs' || !state.mainRun) return; 
+  
+  var activeLap = state.laps[state.laps.length - 1];
+  if (activeLap && activeLap.end === null) {
+    activeLap.end = Date.now();
+    activeLap.endLocal = nowStr(new Date());
+  }
+  
+  if (state.laps.length < 4) {
+    state.laps.push({ start: Date.now(), end: null, startLocal: nowStr(new Date()), endLocal: null });
+  } else {
+    status('Достигнут максимум (4 круга)');
+  }
   setDisplays();
 }
 
 function stop() {
   var t = Date.now();
-  if (mainRun) { mainFinal = t - mainStart; mainRun = false; stopLocal = nowStr(new Date()); }
-  if (lapRun)  { lapFinal = t - lapStart; lapRun = false; }
+  var state = states[mode];
+  
+  if (state.mainRun) { 
+    state.mainFinal = t - state.mainStart; 
+    state.mainRun = false; 
+    state.stopLocal = nowStr(new Date()); 
+  }
+  
+  var activeLap = state.laps[state.laps.length - 1];
+  if (activeLap && activeLap.end === null) {
+    activeLap.end = t;
+    activeLap.endLocal = nowStr(new Date());
+  }
+  
   stopClicks = stopClicks.filter(function (x) { return t - x < 3000; });
   stopClicks.push(t);
-  if (stopClicks.length >= 3) { stopClicks = []; resetAll(); return status('Форма сброшена'); }
+  if (stopClicks.length >= 3) { 
+    stopClicks = []; 
+    resetAll(); 
+    return status('Все формы сброшены'); 
+  }
+  
   setDisplays();
-  dispRun(false);
-}
-
-function lap() {
-  if (mode !== 'kat' || !mainRun || lapRun) return;
-  lapRun = true; lapStart = Date.now(); lapLocal = nowStr(new Date());
-  setDisplays();
+  dispRun(false); // Теперь эта функция умная, она не остановит другие вкладки
 }
 
 function switchMode(m) {
   if (m === mode) return;
   mode = m;
   
-  // Скрываем все вкладки
   $('krsFields').style.display = 'none';
   $('zlsFields').style.display = 'none';
   $('chlFields').style.display = 'none';
   
-  // Показываем нужную
   $(m + 'Fields').style.display = 'block';
   
-  // Обновляем кнопки табов
   $('tabKrs').classList.toggle('on', m === 'krs');
   $('tabZls').classList.toggle('on', m === 'zls');
   $('tabChl').classList.toggle('on', m === 'chl');
   
-  setDisplays(); // Обновляем таймер на экране
+  setDisplays(); 
 }
 
 function resetAll() {
-  mainRun = false; lapRun = false; mainFinal = null; lapFinal = null;
-  startLocal = null; lapLocal = null; stopLocal = null;
-  ['entry','bib','point','kassa','kassCount','staff','queue','noteK','noteKt'].forEach(function (id) {
-    var e = $(id); if (e) e.value = '';
+  ['krs', 'zls', 'chl'].forEach(function(m) {
+    states[m] = { mainRun: false, mainStart: 0, mainFinal: null, startLocal: null, stopLocal: null, laps: [] };
   });
-  document.querySelectorAll('[data-group] .tg').forEach(function (b) { b.classList.remove('on'); });
-  $('chkPrint').classList.remove('on'); $('chkIssue').classList.remove('on');
-  $('pointList').innerHTML = ''; $('point').classList.remove('err');
-  $('entry').classList.remove('err'); 
-  $('entryHint').style.display = 'none';
-  $('latinHint').style.display = 'none';
-  $('kassa').classList.remove('err');
-  $('kassaHint').style.display = 'none';
+  
+  document.querySelectorAll('input, textarea').forEach(function(e) { e.value = ''; });
+  document.querySelectorAll('.tg').forEach(function(b) { b.classList.remove('on'); });
+  document.querySelectorAll('.hint').forEach(function(h) { h.style.display = 'none'; });
+  document.querySelectorAll('.err').forEach(function(e) { e.classList.remove('err'); });
+  
+  dispRun(false);
   setDisplays();
 }
 
 /* ---------- ввод ---------- */
 function digits(el, max) { el.value = el.value.replace(/\D/g, '').slice(0, max); }
+
 function entryInput() {
   var d = $('entry').value.replace(/\D/g, '').slice(0, 16);
   var val = d ? 'G' + d : '';
   $('entry').value = val;
 
-  // Визуальная проверка на существование во входных
   var isInvalid = false;
   if (val && dict.inputs && dict.inputs.length > 0) {
-    if (dict.inputs.indexOf(val) === -1) {
-      isInvalid = true;
-    }
+    if (dict.inputs.indexOf(val) === -1) isInvalid = true;
   }
   $('entry').classList.toggle('err', isInvalid);
   $('entryHint').style.display = isInvalid ? 'block' : 'none';
 }
   
-function pointInput() {
-  var v = $('point').value.toUpperCase();
-  // МАГИЯ: заменяем все множественные пробелы на один
-  v = v.replace(/\s+/g, ' '); 
-  $('point').value = v; 
-  // Проверка на кириллицу (с исключением для слова УЛИЦА)
+function pointInput(m) {
+  var input = $(m + '-point');
+  var list = $(m + '-pointList');
+  var hint = $(m + '-latinHint');
+  
+  var v = input.value.toUpperCase().replace(/\s+/g, ' '); 
+  input.value = v; 
+  
   var checkV = v.replace(/УЛИЦА/g, '');
   var hasCyrillic = /[А-ЯЁ]/.test(checkV); 
-  // Проверка: если начинается с MT и следом НЕ пробел (например, MT5.1)
   var hasMtError = /^MT[^ ]/.test(v) && v.length > 2;  
-  // ПРОВЕРКА НА ЗАПРЕЩЁННУЮ ТОЧКУ (берем список с сервера)
   var isBanned = (dict.bannedPoints || []).indexOf(v) !== -1;
-  // Если есть любая из ошибок
   var hasError = hasCyrillic || hasMtError || isBanned;
-  $('point').classList.toggle('err', hasError); 
-  var hintEl = $('latinHint');  
-  // Приоритет подсказок: сначала запрещенная точка, потом пробел, потом кириллица
+  
+  input.classList.toggle('err', hasError); 
+  
   if (isBanned) {
-    hintEl.textContent = 'Эта точка питания не участвует в замерах!';
-    hintEl.style.display = 'block';
+    hint.textContent = 'Эта точка питания не участвует в замерах!';
+    hint.style.display = 'block';
   } else if (hasMtError) {
-    hintEl.textContent = 'Поставь пробел после MT!';
-    hintEl.style.display = 'block';
+    hint.textContent = 'Поставь пробел после MT!';
+    hint.style.display = 'block';
   } else if (hasCyrillic) {
-    hintEl.textContent = 'Используй латиницу!';
-    hintEl.style.display = 'block';
+    hint.textContent = 'Используй латиницу!';
+    hint.style.display = 'block';
   } else {
-    hintEl.style.display = 'none';
+    hint.style.display = 'none';
   }  
-  var q = $('pointList');
-  q.innerHTML = '';  
-  // Если поле пустое или есть ошибка — список не показываем
+  
+  list.innerHTML = '';  
   if (!v || hasError) return;  
-  // Ищем совпадения
-  var m = (dict.points || []).filter(function (p) { 
+  
+  var mList = (dict.points || []).filter(function (p) { 
     return p.toUpperCase().indexOf(v) !== -1; 
   }); 
-  // Умная сортировка (сначала те, что начинаются с введенных символов)
-  m.sort(function(a, b) {
+  
+  mList.sort(function(a, b) {
     var aStarts = a.toUpperCase().startsWith(v);
     var bStarts = b.toUpperCase().startsWith(v);
     if (aStarts && !bStarts) return -1;
     if (!aStarts && bStarts) return 1;
     return a.localeCompare(b);
   });
-  // Ограничиваем выдачу 10 вариантами
-  m = m.slice(0, 10);  
-  // Отрисовываем список
-  m.forEach(function (p) {
+  
+  mList = mList.slice(0, 10);  
+  
+  mList.forEach(function (p) {
     var d = document.createElement('div');
     d.textContent = p;
-    d.onclick = function () { pickPoint(p); };
-    q.appendChild(d);
+    d.onclick = function () { pickPoint(p, m); };
+    list.appendChild(d);
   });
 }
 
-function checkKassa() {
-  var k = $('kassa').value;
-  var kc = $('kassCount').value; 
+function checkKassa(m) {
+  if (m !== 'zls') return true; // В ЧЛ нет кассы
+  
+  var k = $(m + '-kassa').value;
+  var kc = $(m + '-kassCount').value; 
   var isInvalid = false;  
-  // Проверяем только если ОБА поля заполнены
+  
   if (k !== '' && kc !== '') {
-    var kassaNum = parseInt(k, 10);
-    var kassCountNum = parseInt(kc, 10);    
-    if (kassaNum > kassCountNum) {
-      isInvalid = true;
-    }
+    if (parseInt(k, 10) > parseInt(kc, 10)) isInvalid = true;
   }  
-  $('kassa').classList.toggle('err', isInvalid);
-  $('kassaHint').style.display = isInvalid ? 'block' : 'none';  
-  return !isInvalid; // Возвращаем true, если всё ок (для экспорта)
+  
+  $(m + '-kassa').classList.toggle('err', isInvalid);
+  $(m + '-kassaHint').style.display = isInvalid ? 'block' : 'none';  
+  
+  return !isInvalid; 
 }  
 
-/* ---------- Чеки: выдача не бывает без печати ---------- */
-function togglePrint() {
-  var pr = $('chkPrint');
+function togglePrint(m) {
+  var pr = $(m + '-chkPrint');
+  var is = $(m + '-chkIssue');
   pr.classList.toggle('on');
-  // Печати нет — значит выдавать нечего
-  if (!pr.classList.contains('on')) $('chkIssue').classList.remove('on');
+  if (!pr.classList.contains('on')) is.classList.remove('on');
 }
-function toggleIssue() {
-  var is = $('chkIssue');
-  // Есть что выдать — значит это было напечатано
-  if (!is.classList.contains('on')) $('chkPrint').classList.add('on');
+
+function toggleIssue(m) {
+  var pr = $(m + '-chkPrint');
+  var is = $(m + '-chkIssue');
+  if (!is.classList.contains('on')) pr.classList.add('on');
   is.classList.toggle('on');
 }
   
-function pickPoint(p) {
-  $('point').value = p;
-  pointInput(); 
-  $('pointList').innerHTML = ''; 
+function pickPoint(p, m) {
+  $(m + '-point').value = p;
+  pointInput(m); 
+  $(m + '-pointList').innerHTML = ''; 
 }
   
 function pick(el) {
   var group = el.parentElement.getAttribute('data-group');
   if (!group) {
-    // группа не задана — ведём себя как раньше (для «Чеки»)
     el.classList.toggle('on');
     return;
   }
@@ -614,10 +700,7 @@ function pick(el) {
 
 function sel(g) {
   var wrap = document.querySelector('[data-group="' + g + '"]');
-  if (!wrap) {
-    console.warn('sel(): группа "' + g + '" не найдена в разметке');
-    return '';
-  }
+  if (!wrap) return '';
   var b = wrap.querySelector('.on');
   return b ? b.getAttribute('data-val') : '';
 }
@@ -625,10 +708,13 @@ function sel(g) {
 /* ---------- экспорт ---------- */
 function exportRec() {
   if (dict.locked) return status('Записи заблокированы администратором');
-  if (mainRun || lapRun) return status('Сначала нажмите СТОП');
-  if (mainFinal === null) return status('Нет замера для экспорта');
+  
+  var state = states[mode];
+  if (state.mainRun) return status('Сначала нажмите СТОП');
+  if (state.mainFinal === null) return status('Нет замера для экспорта');
 
   var rec;
+  
   if (mode === 'krs') {
     var entry = $('entry').value, bib = $('bib').value;
     var kontur = sel('kontur'), osmotr = sel('osmotr');
@@ -640,41 +726,39 @@ function exportRec() {
     if (!osmotr) return status('Выберите тип осмотра');
     
     rec = { mode: 'krs', entry: entry, kontur: kontur, osmotr: osmotr, bib: bib,
-            durSec: Math.round(mainFinal / 1000), note: $('noteK').value, startLocal: startLocal };
+            durSec: Math.round(state.mainFinal / 1000), note: $('noteK').value, startLocal: state.startLocal };
             
   } else {
-    var point = $('point').value, kassa = $('kassa').value;
+    var point = $(mode + '-point').value;
+    var kassa = mode === 'zls' ? $(mode + '-kassa').value : null;
+    var kassCount = mode === 'zls' ? $(mode + '-kassCount').value : null;
     
     if (!point) return status('Заполните «Номер точки»');
     
-    // 1. Проверка на кириллицу (с исключением для слова УЛИЦА)
     var checkPoint = point.replace(/УЛИЦА/g, '');
     if (/[А-ЯЁ]/.test(checkPoint)) return status('Используй латиницу!');
-    
-    // 2. Проверка на пробел после MT
     if (/^MT[^ ]/.test(point) && point.length > 2) return status('Поставь пробел после MT!');
-    
-    // 3. ПРОВЕРКА НА ЗАПРЕЩЁННУЮ ТОЧКУ (из настроек)
     if ((dict.bannedPoints || []).indexOf(point) !== -1) return status('Эта точка питания не участвует в замерах!');
-    
-    // 4. Проверка, что точка вообще есть в списке
     if (!dict.points || dict.points.indexOf(point) === -1) return status('Точки «' + point + '» нет в списке точек');
     
-    if (!kassa) return status('Заполните «Номер кассы»');
-    if (!checkKassa()) return status('Номер не может быть больше количества работающих касс!');
+    if (mode === 'zls') {
+      if (!kassa) return status('Заполните «Номер кассы»');
+      if (!checkKassa(mode)) return status('Номер не может быть больше количества работающих касс!');
+    }
     
-    var hadLap = lapFinal !== null;
-    if (hadLap && !$('queue').value) return status('Заполните «Человек в очереди»');
-    
-    rec = { mode: 'katering', point: point, kassa: kassa,
-            kassCount: $('kassCount').value || null, 
-            staff: $('staff').value || null, 
-            queue: $('queue').value || null,
-            print: $('chkPrint').classList.contains('on'),
-            issue: $('chkIssue').classList.contains('on'),
-            note: $('noteKt').value, hadLap: hadLap, startLocal: startLocal, lapLocal: lapLocal,
-            mainSec: Math.round(mainFinal / 1000),
-            lapSec: hadLap ? Math.round(lapFinal / 1000) : null };
+    var hadLap = state.laps.length > 0;
+    var lapSec = hadLap ? Math.round((state.laps[0].end - state.laps[0].start) / 1000) : null;
+    var lapLocal = hadLap ? state.laps[0].startLocal : null;
+
+    rec = { mode: mode, point: point, kassa: kassa,
+            kassCount: kassCount || null, 
+            staff: $(mode + '-staff').value || null, 
+            queue: $(mode + '-queue').value || null,
+            print: $(mode + '-chkPrint').classList.contains('on'),
+            issue: $(mode + '-chkIssue').classList.contains('on'),
+            note: $(mode + '-noteKt').value, hadLap: hadLap, startLocal: state.startLocal, lapLocal: lapLocal,
+            mainSec: Math.round(state.mainFinal / 1000),
+            lapSec: lapSec };
   }
   
   var q = getQ(); q.push(rec); saveQ(q);
@@ -698,7 +782,7 @@ function sync() {
     chain = chain.then(function () {
       return fetch(API, { 
         method: 'POST', 
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, /* ИЗМЕНЕНА ЭТА СТРОКА */
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(rec) 
       })
       .then(function (r) { return r.json(); })
@@ -720,13 +804,9 @@ function sync() {
 
 /* ---------- Виброотклик ---------- */
 function haptic() {
-  // Сработает только на Android или в браузерах, где это разрешено
-  if (navigator.vibrate) {
-    navigator.vibrate(30); // Короткая вибрация на 30 миллисекунд
-  }
+  if (navigator.vibrate) navigator.vibrate(30);
 }
 
-// Привязываем вибрацию к основным кнопкам, верхним табам и переключателям
 document.querySelectorAll('.btn, .tab, .tg').forEach(function(el) {
   el.addEventListener('click', haptic);
 });
