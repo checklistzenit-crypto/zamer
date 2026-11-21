@@ -68,10 +68,10 @@ body{
 /* Анимация мигания */
 @keyframes pulseTabBright {
   0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.5); } /* +30% яркости */
+  50% { filter: brightness(1.6); } /* +60% яркости */
 }
 .tab.running:not(.on) {
-  animation: pulseTabBright 4s infinite ease-in-out;
+  animation: pulseTabBright 3s infinite ease-in-out;
 }
 /* Применяем анимацию и задаем базовый цвет активной вкладки для мигающих табов */
 .tab.running:not(.on) {
@@ -183,20 +183,31 @@ input.err{background:#590d0b}
 
 /* Сетка для 4 кругов */
 .laps-container {
-  display: grid; 
+  display: grid; /* Всегда grid, чтобы работали анимации */
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  max-height: 0; /* Изначально сжат */
+  max-height: 0; /* Скрыто по умолчанию */
   opacity: 0;
   overflow: hidden;
-  transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
   margin: 0;
+  transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
 }
+
 .laps-container.active {
-  max-height: 150px; /* Раскрывается при появлении кругов */
+  max-height: 100px; /* Раскрываем */
   opacity: 1;
   margin-top: 10px;
   margin-bottom: 10px;
+}
+
+.form-container {
+  min-height: auto; 
+  margin-top: 50px;
+  transition: margin-top 0.3s ease; /* Плавно меняем отступ */
+}
+
+.form-container.with-laps {
+  margin-top: 20px;
 }
 .lap-item {
   display: flex; 
@@ -242,8 +253,27 @@ input.err{background:#590d0b}
   
 /* Подсказки */
 .hint{display:none;color:#ff6b6b;font-size:11px;margin-top:4px}
-.suggest{max-height:150px;overflow:auto;border-radius:6px;margin-top:2px}
-.suggest div{background:#262626;padding:10px;text-align:center;border-bottom:1px solid #000}
+.suggest {
+  display: none; /* Скрыт по умолчанию */
+  position: absolute;
+  top: 100%; /* Появляется ровно под полем ввода */
+  left: 0;
+  right: 0;
+  z-index: 100; /* Поверх всех элементов */
+  background: #222;
+  max-height: 150px;
+  overflow-y: auto;
+  border-radius: 6px;
+  margin-top: 4px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.8); /* Добавили тень, чтобы выделялся */
+}
+.suggest div {
+  background: #262626;
+  padding: 10px;
+  text-align: center;
+  border-bottom: 1px solid #000;
+  color: #fff;
+}
 </style>
 </head>
 <body>
@@ -297,9 +327,11 @@ window.onerror = function (msg, src, line) {
         <input id="entry" inputmode="numeric" maxlength="17" oninput="entryInput()">
         <div class="hint" id="entryHint">Номера нет в списке!</div>
       </div>
-      <div>
+       <div style="position: relative;">
         <div class="row-label">Номер манишки</div>
-        <input id="bib" inputmode="numeric" maxlength="4" oninput="digits(this,4)">
+        <input id="bib" inputmode="numeric" maxlength="4" oninput="digits(this,4); bibInput()" onfocus="showBibs()">
+        <!-- ВОТ ЭТА СТРОКА: -->
+        <div id="bibList" class="suggest"></div>
       </div>
     </div>
 
@@ -327,7 +359,7 @@ window.onerror = function (msg, src, line) {
   <!-- ================= ВКЛАДКА ЗЛС (КЕЙТЕРИНГ) ================= -->
   <div id="zlsFields" style="display:none">
     <div class="grid-2">
-      <div>
+      <div style="position: relative;">
         <div class="row-label">Номер точки</div>
         <input id="zls-point" autocomplete="off" oninput="pointInput('zls')" lang="en" spellcheck="false">
         <div id="zls-pointList" class="suggest"></div>
@@ -373,7 +405,7 @@ window.onerror = function (msg, src, line) {
   <div id="chlFields" style="display:none">
     <!-- Ряд 1: Точка и Очередь -->
     <div class="grid-2">
-      <div>
+      <div style="position: relative;">
         <div class="row-label">Номер точки</div>
         <input id="chl-point" autocomplete="off" oninput="pointInput('chl')" lang="en" spellcheck="false">
         <div id="chl-pointList" class="suggest"></div>
@@ -473,24 +505,22 @@ function setDisplays() {
   if ($('main').textContent !== mainText) $('main').textContent = mainText;
 
   // 3. Обновление блоков кругов
-  var lapsContainer = $('lapsContainer');
+    var lapsContainer = $('lapsContainer');
   var formContainer = document.querySelector('.form-container');
   
   if (mode === 'krs') {
-     lapsContainer.style.display = 'none';
+     lapsContainer.classList.remove('active');
+     formContainer.classList.remove('with-laps');
      $('main').classList.remove('shrink');
-     formContainer.style.marginTop = '50px';
   } else {
-     lapsContainer.style.display = 'grid';
-     // Если есть хотя бы один круг, показываем сетку плавно
      if (state.laps.length > 0) {
-         lapsContainer.classList.add('active');
-         $('main').classList.add('shrink');
-         formContainer.style.marginTop = '20px';
+         lapsContainer.classList.add('active'); // Плавно показываем
+         formContainer.classList.add('with-laps'); // Плавно поднимаем поля
+         $('main').classList.add('shrink'); // Плавно уменьшаем таймер
      } else {
          lapsContainer.classList.remove('active');
+         formContainer.classList.remove('with-laps');
          $('main').classList.remove('shrink');
-         formContainer.style.marginTop = '50px';
      }
      // ... (дальше идет цикл отрисовки кругов, его не трогаем)
 
@@ -666,6 +696,59 @@ function entryInput() {
   $('entry').classList.toggle('err', isInvalid);
   $('entryHint').style.display = isInvalid ? 'block' : 'none';
 }
+function showBibs() {
+  var entry = $('entry').value;
+  var list = $('bibList');
+  list.innerHTML = ''; 
+  
+  if (!entry || !dict.bibs || !dict.bibs[entry]) {
+    list.style.display = 'none'; // Скрываем, если пусто
+    return;
+  }
+
+  list.style.display = 'block'; // Показываем
+  dict.bibs[entry].forEach(function(b) {
+    var div = document.createElement('div');
+    div.textContent = b;
+    div.onclick = function() { 
+      $('bib').value = b; 
+      list.style.display = 'none'; // Прячем после выбора
+    };
+    list.appendChild(div);
+  });
+}
+  
+function bibInput() {
+  var v = $('bib').value;
+  var entry = $('entry').value;
+  var list = $('bibList');
+  list.innerHTML = '';
+  
+  if (!v || !entry || !dict.bibs || !dict.bibs[entry]) {
+    list.style.display = 'none';
+    return;
+  }
+
+  var matches = dict.bibs[entry].filter(function(b) { 
+    return b.indexOf(v) !== -1; 
+  });
+  
+  if (matches.length === 0) {
+    list.style.display = 'none';
+    return;
+  }
+
+  list.style.display = 'block';
+  matches.forEach(function(b) {
+    var div = document.createElement('div');
+    div.textContent = b;
+    div.onclick = function() { 
+      $('bib').value = b; 
+      list.style.display = 'none'; 
+    };
+    list.appendChild(div);
+  });
+}
   
 function pointInput(m) {
   var input = $(m + '-point');
@@ -675,7 +758,7 @@ function pointInput(m) {
   var v = input.value.toUpperCase().replace(/\s+/g, ' '); 
   input.value = v; 
   
-  // СОХРАНЯЕМ В ПАМЯТЬ:
+  // Сохраняем в память (Шаг А)
   localStorage.setItem('saved_point_' + m, v);
   
   var checkV = v.replace(/УЛИЦА/g, '');
@@ -686,6 +769,7 @@ function pointInput(m) {
   
   input.classList.toggle('err', hasError); 
   
+  // Управление подсказками
   if (isBanned) {
     hint.textContent = 'Эта точка питания не участвует в замерах!';
     hint.style.display = 'block';
@@ -699,13 +783,21 @@ function pointInput(m) {
     hint.style.display = 'none';
   }  
   
+  // Очищаем список
   list.innerHTML = '';  
-  if (!v || hasError) return;  
   
+  // Если поле пустое или есть ошибка — скрываем список и выходим
+  if (!v || hasError) {
+    list.style.display = 'none';
+    return;  
+  }
+  
+  // Ищем совпадения
   var mList = (dict.points || []).filter(function (p) { 
     return p.toUpperCase().indexOf(v) !== -1; 
   }); 
   
+  // Умная сортировка
   mList.sort(function(a, b) {
     var aStarts = a.toUpperCase().startsWith(v);
     var bStarts = b.toUpperCase().startsWith(v);
@@ -714,8 +806,19 @@ function pointInput(m) {
     return a.localeCompare(b);
   });
   
+  // Ограничиваем выдачу 10 вариантами
   mList = mList.slice(0, 10);  
   
+  // Если ничего не нашли — скрываем список
+  if (mList.length === 0) {
+    list.style.display = 'none';
+    return;
+  }
+
+  // ПОКАЗЫВАЕМ СПИСОК (свойство display: block)
+  list.style.display = 'block';
+  
+  // Отрисовываем список
   mList.forEach(function (p) {
     var d = document.createElement('div');
     d.textContent = p;
@@ -758,7 +861,7 @@ function toggleIssue(m) {
 function pickPoint(p, m) {
   $(m + '-point').value = p;
   pointInput(m); 
-  $(m + '-pointList').innerHTML = ''; 
+  $(m + '-pointList').style.display = 'none'; // Принудительно скрываем после выбора
 }
   
 function pick(el) {
@@ -886,6 +989,15 @@ document.querySelectorAll('.btn, .tab, .tg').forEach(function(el) {
 });
   
 /* ---------- справочники и блокировка ---------- */
+document.addEventListener('click', function(e) {
+  // Если кликнули не по полю ввода и не по самому списку — закрываем все списки
+  if (!e.target.closest('input') && !e.target.closest('.suggest')) {
+    document.querySelectorAll('.suggest').forEach(function(el) {
+      el.style.display = 'none';
+    });
+  }
+});
+  
 function loadDict() {
   // 1. Сразу берем данные из кэша телефона (моментальная загрузка)
   try {
