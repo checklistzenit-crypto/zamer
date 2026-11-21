@@ -66,15 +66,22 @@ body{
 .tab.on.chl { background:#4a0018; } /* Черно-бордовый по ТЗ */
 
 /* Анимация мигания */
-@keyframes pulseTab {
-  0% { opacity: 1; }
-  50% { opacity: 0.3; }
-  100% { opacity: 1; }
+/* Анимация мигания */
+@keyframes pulseTabBright {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.3); } /* +30% яркости */
 }
 .tab.running:not(.on) {
-  animation: pulseTab 5s infinite ease-in-out;
+  animation: pulseTabBright 5s infinite ease-in-out;
 }
-
+/* Применяем анимацию и задаем базовый цвет активной вкладки для мигающих табов */
+.tab.running:not(.on) {
+  animation: pulseTabBright 5s infinite ease-in-out;
+}
+.tab.krs.running:not(.on) { background-color: #255010; }
+.tab.zls.running:not(.on) { background-color: #003c61; }
+.tab.chl.running:not(.on) { background-color: #4a0018; }
+  
 /* Плашка блокировки */
 #lockBar{display:none;background:#590d0b;color:#fff;text-align:center;padding:10px;border-radius:8px;margin-bottom:12px;font-size:14px}
 
@@ -176,25 +183,34 @@ input.err{background:#590d0b}
 }
 
   /* Сетка для 4 кругов */
+/* Сетка для 4 кругов */
 .laps-container {
-  display: none; /* Изначально скрыт */
+  display: none; 
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 12px;
   margin-top: 10px;
   margin-bottom: 10px;
 }
-.lap-box {
-  background: #1c1c1c;
-  border-radius: 8px;
-  padding: 8px;
-  text-align: center;
-  visibility: hidden; /* Место зарезервировано, но невидимо */
+.lap-item {
+  display: flex; 
+  justify-content: space-between; /* Подпись слева, таймер справа */
+  align-items: baseline;
+  visibility: hidden; /* Место зарезервировано */
+  padding: 0 4px;
 }
-.lap-box .row-label {
-  margin-bottom: 4px;
-  text-align: center;
-  font-size: 11px;
+.lap-label {
+  font-size: 12px;
+  color: #aaa;
 }
+/* Уменьшили шрифт на 20% (было 27px, стало 21px) */
+.disp-lap { 
+  font-size: 21px; 
+  text-align: right; 
+  color: #fff; 
+  font-variant-numeric: tabular-nums; 
+  font-weight: 300; 
+}
+
 /* Уменьшаем главный таймер, если есть круги */
 .disp.shrink { font-size: 40px; }
 
@@ -246,25 +262,24 @@ window.onerror = function (msg, src, line) {
 <!-- Контейнер для 4 кругов -->
 <div id="lapsContainer" class="laps-container">
   <!-- Ряд 1 -->
-  <div class="lap-box" id="lapBox1">
-    <span class="row-label">Круг 1</span>
-    <div id="lapDisp1" class="disp-lap">0:00.00</div>
+  <div class="lap-item" id="lapBox1">
+    <span class="lap-label">Круг 1</span>
+    <span id="lapDisp1" class="disp-lap">0:00.0</span>
   </div>
-  <div class="lap-box" id="lapBox3">
-    <span class="row-label">Круг 3</span>
-    <div id="lapDisp3" class="disp-lap">0:00.00</div>
+  <div class="lap-item" id="lapBox3">
+    <span class="lap-label">Круг 3</span>
+    <span id="lapDisp3" class="disp-lap">0:00.0</span>
   </div>
   <!-- Ряд 2 -->
-  <div class="lap-box" id="lapBox2">
-    <span class="row-label">Круг 2</span>
-    <div id="lapDisp2" class="disp-lap">0:00.00</div>
+  <div class="lap-item" id="lapBox2">
+    <span class="lap-label">Круг 2</span>
+    <span id="lapDisp2" class="disp-lap">0:00.0</span>
   </div>
-  <div class="lap-box" id="lapBox4">
-    <span class="row-label">Круг 4</span>
-    <div id="lapDisp4" class="disp-lap">0:00.00</div>
+  <div class="lap-item" id="lapBox4">
+    <span class="lap-label">Круг 4</span>
+    <span id="lapDisp4" class="disp-lap">0:00.0</span>
   </div>
 </div>
-
 <div class="form-container">
   
   <!-- ================= ВКЛАДКА КРС ================= -->
@@ -420,6 +435,12 @@ function fmtMs(ms) {
   return h > 0 ? h + ':' + p(min) + ':' + p(sec) + '.' + p(cc)
                :     min + ':' + p(sec) + '.' + p(cc);
 }
+function fmtLap(ms) {
+  var s = Math.floor(ms / 1000);
+  var tenth = Math.floor((ms % 1000) / 100); // Десятые доли
+  function p(n) { return String(n).padStart(2, '0'); }
+  return Math.floor(s / 60) + ':' + p(s % 60) + '.' + tenth;
+}
   
 function status(t) { $('status').textContent = t; }
 
@@ -465,7 +486,7 @@ function setDisplays() {
          if (state.laps[i]) {
              box.style.visibility = 'visible';
              var lapMs = state.laps[i].end ? (state.laps[i].end - state.laps[i].start) : (Date.now() - state.laps[i].start);
-             disp.textContent = fmtMs(lapMs);
+             disp.textContent = fmtLap(lapMs);
              
              if (!state.laps[i].end && state.mainRun) {
                  disp.style.color = '#00c8ff';
@@ -509,6 +530,8 @@ function lap() {
   var state = states[mode];
   if (mode === 'krs') return status('Круги доступны только на ЗЛС и ЧЛ');
   if (!state.mainRun) return status('Сначала нажмите СТАРТ');
+    // Если уже 4 круга — игнорируем нажатие (5-й клик)
+  if (state.laps.length >= 4) return; 
   
   var activeLap = state.laps[state.laps.length - 1];
   if (activeLap && activeLap.end === null) {
