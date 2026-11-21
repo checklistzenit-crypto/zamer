@@ -570,7 +570,7 @@ function stop() {
   stopClicks.push(t);
   if (stopClicks.length >= 3) { 
     stopClicks = []; 
-    resetAll(); 
+    resetAll(false); 
     return status('Все формы сброшены'); 
   }
   
@@ -595,12 +595,32 @@ function switchMode(m) {
   setDisplays(); 
 }
 
-function resetAll() {
+function resetAll(keepFields) {
+  // Сбрасываем таймеры на ВСЕХ вкладках
   ['krs', 'zls', 'chl'].forEach(function(m) {
     states[m] = { mainRun: false, mainStart: 0, mainFinal: null, startLocal: null, stopLocal: null, laps: [] };
   });
   
-  document.querySelectorAll('input, textarea').forEach(function(e) { e.value = ''; });
+  if (!keepFields) {
+    // ПОЛНАЯ ОЧИСТКА (вызывается при 3х СТОП)
+    document.querySelectorAll('input, textarea').forEach(function(e) { e.value = ''; });
+    localStorage.removeItem('saved_entry');
+    localStorage.removeItem('saved_point_zls');
+    localStorage.removeItem('saved_point_chl');
+  } else {
+    // ЧАСТИЧНАЯ ОЧИСТКА (вызывается при успешном ЭКСПОРТЕ)
+    // Стираем всё, КРОМЕ полей entry и point
+    $('bib').value = '';
+    $('noteK').value = '';
+    $('zls-kassa').value = '';
+    $('zls-kassCount').value = '';
+    $('zls-staff').value = '';
+    $('zls-queue').value = '';
+    $('zls-noteKt').value = '';
+    $('chl-staff').value = '';
+    $('chl-queue').value = '';
+    $('chl-noteKt').value = '';
+  }
   document.querySelectorAll('.tg').forEach(function(b) { b.classList.remove('on'); });
   document.querySelectorAll('.hint').forEach(function(h) { h.style.display = 'none'; });
   document.querySelectorAll('.err').forEach(function(e) { e.classList.remove('err'); });
@@ -616,6 +636,9 @@ function entryInput() {
   var d = $('entry').value.replace(/\D/g, '').slice(0, 16);
   var val = d ? 'G' + d : '';
   $('entry').value = val;
+  
+  // СОХРАНЯЕМ В ПАМЯТЬ:
+  localStorage.setItem('saved_entry', val);
 
   var isInvalid = false;
   if (val && dict.inputs && dict.inputs.length > 0) {
@@ -632,6 +655,9 @@ function pointInput(m) {
   
   var v = input.value.toUpperCase().replace(/\s+/g, ' '); 
   input.value = v; 
+  
+  // СОХРАНЯЕМ В ПАМЯТЬ:
+  localStorage.setItem('saved_point_' + m, v);
   
   var checkV = v.replace(/УЛИЦА/g, '');
   var hasCyrillic = /[А-ЯЁ]/.test(checkV); 
@@ -791,7 +817,7 @@ function exportRec() {
   }
   
   var q = getQ(); q.push(rec); saveQ(q);
-  resetAll();
+  resetAll(true);
   status('Отправка…');
   sync();
 }
@@ -842,9 +868,30 @@ document.querySelectorAll('.btn, .tab, .tg').forEach(function(el) {
   
 /* ---------- справочники и блокировка ---------- */
 function loadDict() {
+  // 1. Сразу берем данные из кэша телефона (моментальная загрузка)
+  try {
+    var cached = localStorage.getItem('cached_dict');
+    if (cached) {
+      dict = JSON.parse(cached);
+      $('lockBar').style.display = dict.locked ? 'block' : 'none';
+    }
+  } catch(e) {}
+
+  // 2. Тихонько обновляем данные с сервера
   fetch(API).then(function (r) { return r.json(); }).then(function (j) {
     dict = j;
+    localStorage.setItem('cached_dict', JSON.stringify(j)); // Сохраняем в память
     $('lockBar').style.display = dict.locked ? 'block' : 'none';
+    
+    // Если админ заблокировал внесение — чистим сохраненные поля
+    if (dict.locked) {
+      localStorage.removeItem('saved_entry');
+      localStorage.removeItem('saved_point_zls');
+      localStorage.removeItem('saved_point_chl');
+      $('entry').value = '';
+      $('zls-point').value = '';
+      $('chl-point').value = '';
+    }
   }).catch(function () {});
 }
 
@@ -854,6 +901,15 @@ setInterval(loadDict, 60000);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js');
 loadDict();
 setDisplays();
+
+// Восстанавливаем сохраненные поля при открытии приложения
+var sEntry = localStorage.getItem('saved_entry');
+if (sEntry) $('entry').value = sEntry;
+var sZls = localStorage.getItem('saved_point_zls');
+if (sZls) $('zls-point').value = sZls;
+var sChl = localStorage.getItem('saved_point_chl');
+if (sChl) $('chl-point').value = sChl;
+
 </script>
 </body>
 </html>
