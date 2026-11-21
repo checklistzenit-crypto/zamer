@@ -405,7 +405,6 @@ var states = {
 };
 
 var stopClicks = [];
-var lastMainText = null;
   
 function nowStr(d) {
   function p(n) { return String(n).padStart(2, '0'); }
@@ -425,13 +424,16 @@ function fmtMs(ms) {
 function status(t) { $('status').textContent = t; }
 
 function setDisplays() {
-  // 1. Мигание неактивных вкладок
+  // 1. Мигание неактивных вкладок (ИСПРАВЛЕНА ОШИБКА С ID)
+  var tabsMap = { krs: 'tabKrs', zls: 'tabZls', chl: 'tabChl' };
   ['krs', 'zls', 'chl'].forEach(function(m) {
-    var tab = $('tab' + m.toUpperCase());
-    if (states[m].mainRun && mode !== m) {
-      tab.classList.add('running');
-    } else {
-      tab.classList.remove('running');
+    var tab = $(tabsMap[m]);
+    if (tab) {
+      if (states[m].mainRun && mode !== m) {
+        tab.classList.add('running');
+      } else {
+        tab.classList.remove('running');
+      }
     }
   });
 
@@ -479,9 +481,7 @@ function setDisplays() {
 
 var dispTimer = null;
 function dispRun(on) {
-  // Проверяем, есть ли хоть один запущенный таймер
   var anyRunning = states.krs.mainRun || states.zls.mainRun || states.chl.mainRun;
-  
   if (anyRunning && !dispTimer) {
     dispTimer = setInterval(setDisplays, 40);
   } else if (!anyRunning && dispTimer) { 
@@ -493,7 +493,9 @@ function dispRun(on) {
 function start() {
   if (dict.locked) return status('Записи заблокированы администратором');
   var state = states[mode];
-  if (state.mainRun || state.mainFinal !== null) return;
+  
+  if (state.mainRun) return status('Таймер уже идёт');
+  if (state.mainFinal !== null) return status('Замер уже сделан. Сбросьте форму (3х СТОП)');
   
   state.mainRun = true; 
   state.mainStart = Date.now(); 
@@ -505,7 +507,8 @@ function start() {
 
 function lap() {
   var state = states[mode];
-  if (mode === 'krs' || !state.mainRun) return; 
+  if (mode === 'krs') return status('Круги доступны только на ЗЛС и ЧЛ');
+  if (!state.mainRun) return status('Сначала нажмите СТАРТ');
   
   var activeLap = state.laps[state.laps.length - 1];
   if (activeLap && activeLap.end === null) {
@@ -546,7 +549,7 @@ function stop() {
   }
   
   setDisplays();
-  dispRun(false); // Теперь эта функция умная, она не остановит другие вкладки
+  dispRun(false); 
 }
 
 function switchMode(m) {
@@ -651,7 +654,7 @@ function pointInput(m) {
 }
 
 function checkKassa(m) {
-  if (m !== 'zls') return true; // В ЧЛ нет кассы
+  if (m !== 'zls') return true; 
   
   var k = $(m + '-kassa').value;
   var kc = $(m + '-kassCount').value; 
