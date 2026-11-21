@@ -38,12 +38,12 @@ body{
 
 /* Класс для уменьшения главного таймера при появлении круга */
 .disp.shrink {
-  font-size: 48px; 
+  font-size: 45px; 
 }
 
 /* Таймер круга */
 .disp-lap{
-  font-size:27px; text-align:center; color:#fff; font-variant-numeric:tabular-nums; 
+  font-size:25px; text-align:center; color:#fff; font-variant-numeric:tabular-nums; 
   line-height:1.1; margin: 0; font-weight:300;
 }
 
@@ -66,17 +66,16 @@ body{
 .tab.on.chl { background:#4a0018; } /* Черно-бордовый по ТЗ */
 
 /* Анимация мигания */
-/* Анимация мигания */
 @keyframes pulseTabBright {
   0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.3); } /* +30% яркости */
+  50% { filter: brightness(1.5); } /* +30% яркости */
 }
 .tab.running:not(.on) {
-  animation: pulseTabBright 5s infinite ease-in-out;
+  animation: pulseTabBright 4s infinite ease-in-out;
 }
 /* Применяем анимацию и задаем базовый цвет активной вкладки для мигающих табов */
 .tab.running:not(.on) {
-  animation: pulseTabBright 5s infinite ease-in-out;
+  animation: pulseTabBright 4s infinite ease-in-out;
 }
 .tab.krs.running:not(.on) { background-color: #255010; }
 .tab.zls.running:not(.on) { background-color: #003c61; }
@@ -204,7 +203,7 @@ input.err{background:#590d0b}
 }
 /* Уменьшили шрифт на 20% (было 27px, стало 21px) */
 .disp-lap { 
-  font-size: 23px; 
+  font-size: 25px; 
   text-align: right; 
   color: #fff; 
   font-variant-numeric: tabular-nums; 
@@ -212,7 +211,7 @@ input.err{background:#590d0b}
 }
 
 /* Уменьшаем главный таймер, если есть круги */
-.disp.shrink { font-size: 40px; }
+.disp.shrink { font-size: 45px; }
 
 /* Блокировка альбомного режима */
 @media screen and (orientation: landscape) {
