@@ -188,8 +188,8 @@ input.err{background:#590d0b}
   display: none; 
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-top: 10px;
-  margin-bottom: 10px;
+  margin-top: 5px;
+  margin-bottom: 0px;
 }
 .lap-item {
   display: flex; 
@@ -199,12 +199,12 @@ input.err{background:#590d0b}
   padding: 0 4px;
 }
 .lap-label {
-  font-size: 12px;
+  font-size: 13px;
   color: #aaa;
 }
 /* Уменьшили шрифт на 20% (было 27px, стало 21px) */
 .disp-lap { 
-  font-size: 21px; 
+  font-size: 23px; 
   text-align: right; 
   color: #fff; 
   font-variant-numeric: tabular-nums; 
@@ -467,16 +467,20 @@ function setDisplays() {
 
   // 3. Обновление блоков кругов
   var lapsContainer = $('lapsContainer');
+  var formContainer = document.querySelector('.form-container');
   if (mode === 'krs') {
      lapsContainer.style.display = 'none';
      $('main').classList.remove('shrink');
+     formContainer.style.marginTop = '50px'; // Стандартный отступ
   } else {
      if (state.laps.length > 0) {
          lapsContainer.style.display = 'grid';
          $('main').classList.add('shrink');
+         formContainer.style.marginTop = '20px'; // УМЕНЬШЕННЫЙ отступ, когда есть круги
      } else {
          lapsContainer.style.display = 'none';
          $('main').classList.remove('shrink');
+         formContainer.style.marginTop = '50px'; // Стандартный отступ, когда кругов нет
      }
 
      for (var i = 0; i < 4; i++) {
