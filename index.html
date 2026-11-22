@@ -302,6 +302,27 @@ input.err{background:#590d0b}
   pointer-events: auto;
 }
 
+  .modal-close {
+  position: absolute; 
+  top: 12px; 
+  right: 12px;
+  background: #333; 
+  color: #fff; 
+  border: 0; 
+  border-radius: 50%;
+  width: 36px; 
+  height: 36px; 
+  min-width: 36px; 
+  min-height: 36px; /* Жестко фиксируем размеры */
+  padding: 0; /* Убираем внутренние отступы, которые растягивают кнопку */
+  font-size: 16px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  cursor: pointer; 
+  z-index: 102;
+}
+  
 /* НОВОЕ: Цвета активных тоглов внутри модалки */
 .modal-tg.zls.on { background: #003c61; }
 .modal-tg.chl.on { background: #4a0018; }
