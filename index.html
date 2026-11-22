@@ -274,6 +274,41 @@ input.err{background:#590d0b}
   border-bottom: 1px solid #000;
   color: #fff;
 }
+/* Модальное окно */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.8); z-index: 100;
+  display: none; opacity: 0; transition: opacity 0.3s ease;
+}
+.modal-window {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  max-width: 480px; margin: 0 auto;
+  background: #1c1c1c; color: #fff;
+  border-radius: 16px 16px 0 0;
+  padding: 20px 16px calc(env(safe-area-inset-bottom) + 20px);
+  z-index: 101;
+  transform: translateY(100%); transition: transform 0.3s ease;
+  max-height: 85vh; display: flex; flex-direction: column;
+}
+.modal-window.active { transform: translateY(0); }
+.modal-overlay.active { display: block; opacity: 1; }
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  background: #333; color: #fff; border: 0; border-radius: 50%;
+  width: 32px; height: 32px; font-size: 16px; display: flex;
+  align-items: center; justify-content: center;
+}
+.modal-window h2 { margin: 0 0 16px 0; font-size: 18px; text-align: center; }
+.modal-content { overflow-y: auto; margin-bottom: 16px; flex: 1; }
+.modal-lap-block {
+  background: #262626; border-radius: 8px; padding: 12px;
+  margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;
+}
+.modal-lap-header { display: flex; justify-content: space-between; font-weight: bold; color: #aaa; }
+.modal-lap-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.modal-lap-inputs input { height: 36px; font-size: 14px; }
+#btnConfirmExport { width: 100%; font-size: 18px; padding: 16px; background: #132914; color: #0f0; }
+  
 </style>
 </head>
 <body>
@@ -443,7 +478,17 @@ window.onerror = function (msg, src, line) {
   <button class="btn" id="bStop" onclick="stop()">СТОП</button>
 </div>
 <div id="status"></div>
-
+<!-- Модальное окно для экспорта кругов -->
+<div id="modalOverlay" class="modal-overlay" onclick="closeModal()"></div>
+<div id="exportModal" class="modal-window">
+  <button class="modal-close" onclick="closeModal()">✕</button>
+  <h2>Данные по кругам</h2>
+  <div id="modalContent" class="modal-content">
+    <!-- Сюда будут генерироваться блоки кругов -->
+  </div>
+  <button class="btn" id="btnConfirmExport" onclick="confirmExport()">ПРОДОЛЖИТЬ ЭКСПОРТ</button>
+</div>
+  
 <script>
 var API = 'https://script.google.com/macros/s/AKfycbxtNHriDRJXNoNlRf3dqHTeI8klmNekkMNd4WOY0AFyvgZf48xeV3lfCyAAZv0aBZiAUA/exec';
 function $(id) { return document.getElementById(id); }
@@ -883,58 +928,14 @@ function exportRec() {
   if (state.mainRun) return status('Сначала нажмите СТОП');
   if (state.mainFinal === null) return status('Нет замера для экспорта');
 
-  var rec;
-  
-  if (mode === 'krs') {
-    var entry = $('entry').value, bib = $('bib').value;
-    var kontur = sel('kontur'), osmotr = sel('osmotr');
-    
-    if (!entry) return status('Заполните «Номер входной»');
-    if (!dict.inputs || dict.inputs.indexOf(entry) === -1) return status('Номер «' + entry + '» отсутствует в списке входных');
-    if (!bib) return status('Заполните «Номер манишки»');
-    if (!kontur) return status('Выберите тип контура');
-    if (!osmotr) return status('Выберите тип осмотра');
-    
-    rec = { mode: 'krs', entry: entry, kontur: kontur, osmotr: osmotr, bib: bib,
-            durSec: Math.round(state.mainFinal / 1000), note: $('noteK').value, startLocal: state.startLocal };
-            
-  } else {
-    var point = $(mode + '-point').value;
-    var kassa = mode === 'zls' ? $(mode + '-kassa').value : null;
-    var kassCount = mode === 'zls' ? $(mode + '-kassCount').value : null;
-    
-    if (!point) return status('Заполните «Номер точки»');
-    
-    var checkPoint = point.replace(/УЛИЦА/g, '');
-    if (/[А-ЯЁ]/.test(checkPoint)) return status('Используй латиницу!');
-    if (/^MT[^ ]/.test(point) && point.length > 2) return status('Поставь пробел после MT!');
-    if ((dict.bannedPoints || []).indexOf(point) !== -1) return status('Эта точка питания не участвует в замерах!');
-    if (!dict.points || dict.points.indexOf(point) === -1) return status('Точки «' + point + '» нет в списке точек');
-    
-    if (mode === 'zls') {
-      if (!kassa) return status('Заполните «Номер кассы»');
-      if (!checkKassa(mode)) return status('Номер не может быть больше количества работающих касс!');
-    }
-    
-    var hadLap = state.laps.length > 0;
-    var lapSec = hadLap ? Math.round((state.laps[0].end - state.laps[0].start) / 1000) : null;
-    var lapLocal = hadLap ? state.laps[0].startLocal : null;
-
-    rec = { mode: mode, point: point, kassa: kassa,
-            kassCount: kassCount || null, 
-            staff: $(mode + '-staff').value || null, 
-            queue: $(mode + '-queue').value || null,
-            print: $(mode + '-chkPrint').classList.contains('on'),
-            issue: $(mode + '-chkIssue').classList.contains('on'),
-            note: $(mode + '-noteKt').value, hadLap: hadLap, startLocal: state.startLocal, lapLocal: lapLocal,
-            mainSec: Math.round(state.mainFinal / 1000),
-            lapSec: lapSec };
+  // Если это не КРС и кругов 2 или больше — открываем модалку
+  if (mode !== 'krs' && state.laps.length >= 2) {
+    openModal();
+    return;
   }
-  
-  var q = getQ(); q.push(rec); saveQ(q);
-  resetAll(true, mode); // Передаем текущую вкладку
-  status('Отправка…');
-  sync();
+
+  // В остальных случаях (КРС или 0-1 круг) — экспортируем сразу
+  executeExport([], false);
 }
 
 /* ---------- очередь и синхронизация ---------- */
@@ -990,6 +991,159 @@ document.addEventListener('click', function(e) {
     });
   }
 });
+
+let modalData = []; // Временное хранилище для данных из модалки
+
+function openModal() {
+  var state = states[mode];
+  var point = $(mode + '-point').value;
+  var content = $('modalContent');
+  content.innerHTML = '';
+  modalData = [];
+
+  // Проходим по всем кругам (кроме последнего, его заполним данными с формы)
+  for (let i = 0; i < state.laps.length; i++) {
+    let lap = state.laps[i];
+    let isLast = (i === state.laps.length - 1);
+    
+    // Берем данные из основной формы ТОЛЬКО для последнего круга
+    let kassa = isLast && mode === 'zls' ? $(mode + '-kassa').value : '';
+    let note = isLast ? $(mode + '-noteKt').value : '';
+    let isPrint = isLast ? $(mode + '-chkPrint').classList.contains('on') : false;
+    let isIssue = isLast ? $(mode + '-chkIssue').classList.contains('on') : false;
+
+    modalData.push({ kassa: kassa, note: note, print: isPrint, issue: isIssue });
+
+    let lapMs = lap.end ? (lap.end - lap.start) : 0;
+    let block = document.createElement('div');
+    block.className = 'modal-lap-block';
+    block.innerHTML = `
+      <div class="modal-lap-header">
+        <span>Круг ${i + 1}</span>
+        <span>${fmtLap(lapMs)} (${lap.startLocal.split(' ')[1]})</span>
+      </div>
+      <div class="modal-lap-inputs">
+        ${mode === 'zls' ? `
+          <input type="number" id="modal-kassa-${i}" placeholder="№ Кассы" value="${kassa}" oninput="modalData[${i}].kassa = this.value">
+        ` : '<div></div>'}
+        <div class="toggles" style="height: 36px; padding: 2px;">
+          <button class="tg" id="modal-print-${i}" onclick="toggleModalPrint(${i})">Печать</button>
+          <button class="tg" id="modal-issue-${i}" onclick="toggleModalIssue(${i})">Выдача</button>
+        </div>
+      </div>
+      <input type="text" id="modal-note-${i}" placeholder="Примечание" value="${note}" oninput="modalData[${i}].note = this.value" style="height:36px; font-size:14px; text-align:left;">
+    `;
+    content.appendChild(block);
+
+    // Восстанавливаем визуальное состояние тоглов
+    if (isPrint) $(`modal-print-${i}`).classList.add('on');
+    if (isIssue) {
+      $(`modal-issue-${i}`).classList.add('on');
+      $(`modal-print-${i}`).classList.add('on'); // Выдача не бывает без печати
+    }
+  }
+
+  $('modalOverlay').classList.add('active');
+  $('exportModal').classList.add('active');
+}
+
+function closeModal() {
+  $('modalOverlay').classList.remove('active');
+  $('exportModal').classList.remove('active');
+}
+
+function toggleModalPrint(i) {
+  var pr = $(`modal-print-${i}`);
+  var is = $(`modal-issue-${i}`);
+  pr.classList.toggle('on');
+  if (!pr.classList.contains('on')) { is.classList.remove('on'); modalData[i].issue = false; }
+  modalData[i].print = pr.classList.contains('on');
+}
+
+function toggleModalIssue(i) {
+  var pr = $(`modal-print-${i}`);
+  var is = $(`modal-issue-${i}`);
+  if (!is.classList.contains('on')) { pr.classList.add('on'); modalData[i].print = true; }
+  is.classList.toggle('on');
+  modalData[i].issue = is.classList.contains('on');
+}
+
+function confirmExport() {
+  // Проверяем, что на ЗЛС везде указаны кассы
+  if (mode === 'zls') {
+    for (let i = 0; i < modalData.length; i++) {
+      if (!modalData[i].kassa) return status(`Укажите номер кассы для Круга ${i+1}!`);
+    }
+  }
+  closeModal();
+  executeExport(modalData, true);
+}
+
+function executeExport(modalLaps, isMultiLap) {
+  var state = states[mode];
+  var rec;
+  
+  if (mode === 'krs') {
+    var entry = $('entry').value, bib = $('bib').value;
+    var kontur = sel('kontur'), osmotr = sel('osmotr');
+    
+    if (!entry) return status('Заполните «Номер входной»');
+    if (!dict.inputs || dict.inputs.indexOf(entry) === -1) return status('Номер «' + entry + '» отсутствует в списке входных');
+    if (!bib) return status('Заполните «Номер манишки»');
+    if (!kontur) return status('Выберите тип контура');
+    if (!osmotr) return status('Выберите тип осмотра');
+    
+    rec = { mode: 'krs', entry: entry, kontur: kontur, osmotr: osmotr, bib: bib,
+            durSec: Math.round(state.mainFinal / 1000), note: $('noteK').value, startLocal: state.startLocal };
+    var q = getQ(); q.push(rec); saveQ(q);
+  } else {
+    // Если кругов 2 и больше (модалка)
+    if (isMultiLap && state.laps.length >= 2) {
+      var q = getQ();
+      // Экспортируем все круги, КРОМЕ последнего
+      for (let i = 0; i < state.laps.length - 1; i++) {
+        let lap = state.laps[i];
+        let m = modalLaps[i];
+        q.push({
+          mode: mode, is_lap_only: true,
+          point: $(mode + '-point').value, kassa: m.kassa || null,
+          print: m.print, issue: m.issue, note: m.note,
+          lapLocal: lap.startLocal, lapSec: Math.round((lap.end - lap.start) / 1000)
+        });
+      }
+      
+      // Экспортируем последний круг (полный замер)
+      let lastLap = state.laps[state.laps.length - 1];
+      let lastM = modalLaps[modalLaps.length - 1];
+      q.push({
+        mode: mode, is_lap_only: false,
+        point: $(mode + '-point').value, kassa: lastM.kassa || null,
+        kassCount: $(mode + '-kassCount').value || null, 
+        staff: $(mode + '-staff').value || null, queue: $(mode + '-queue').value || null,
+        print: lastM.print, issue: lastM.issue, note: lastM.note,
+        hadLap: true, startLocal: state.startLocal, lapLocal: lastLap.startLocal,
+        mainSec: Math.round(state.mainFinal / 1000), lapSec: Math.round((lastLap.end - lastLap.start) / 1000)
+      });
+      saveQ(q);
+    } else {
+      // Обычный экспорт (0 или 1 круг)
+      var hadLap = state.laps.length > 0;
+      var lapSec = hadLap ? Math.round((state.laps[0].end - state.laps[0].start) / 1000) : null;
+      var lapLocal = hadLap ? state.laps[0].startLocal : null;
+      rec = { mode: mode, point: $(mode + '-point').value, kassa: $(mode + '-kassa') ? $(mode + '-kassa').value : null,
+              kassCount: $(mode + '-kassCount').value || null, staff: $(mode + '-staff').value || null, 
+              queue: $(mode + '-queue').value || null,
+              print: $(mode + '-chkPrint').classList.contains('on'), issue: $(mode + '-chkIssue').classList.contains('on'),
+              note: $(mode + '-noteKt').value, hadLap: hadLap, startLocal: state.startLocal, lapLocal: lapLocal,
+              mainSec: Math.round(state.mainFinal / 1000), lapSec: lapSec };
+      var q = getQ(); q.push(rec); saveQ(q);
+    }
+  }
+  
+  resetAll(true, mode);
+  status('Отправка…');
+  sync();
+}
   
 function loadDict() {
   // 1. Сразу берем данные из кэша телефона (моментальная загрузка)
