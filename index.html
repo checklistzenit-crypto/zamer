@@ -1108,12 +1108,13 @@ function executeExport(modalLaps, isMultiLap) {
     // Если кругов 2 и больше (модалка)
     if (isMultiLap && state.laps.length >= 2) {
       var q = getQ();
+      
       // Экспортируем все круги, КРОМЕ последнего
       for (let i = 0; i < state.laps.length - 1; i++) {
         let lap = state.laps[i];
         let m = modalLaps[i];
         q.push({
-          mode: 'katering', // ИСПРАВЛЕНО ТУТ
+          mode: 'katering',
           is_lap_only: true,
           point: $(mode + '-point').value, kassa: m.kassa || null,
           print: m.print, issue: m.issue, note: m.note,
@@ -1124,11 +1125,16 @@ function executeExport(modalLaps, isMultiLap) {
       // Экспортируем последний круг (полный замер)
       let lastLap = state.laps[state.laps.length - 1];
       let lastM = modalLaps[modalLaps.length - 1];
+      
+      // ИСПРАВЛЕНИЕ: Проверяем, есть ли поле кассы на этой вкладке
+      var lastKassa = mode === 'zls' ? lastM.kassa : null;
+      var lastKassCount = mode === 'zls' ? ($(mode + '-kassCount').value || null) : null;
+      
       q.push({
-        mode: 'katering', // ИСПРАВЛЕНО ТУТ
+        mode: 'katering',
         is_lap_only: false,
-        point: $(mode + '-point').value, kassa: lastM.kassa || null,
-        kassCount: $(mode + '-kassCount').value || null, 
+        point: $(mode + '-point').value, kassa: lastKassa,
+        kassCount: lastKassCount, 
         staff: $(mode + '-staff').value || null, queue: $(mode + '-queue').value || null,
         print: lastM.print, issue: lastM.issue, note: lastM.note,
         hadLap: true, startLocal: state.startLocal, lapLocal: lastLap.startLocal,
@@ -1144,7 +1150,7 @@ function executeExport(modalLaps, isMultiLap) {
       var kassa = mode === 'zls' ? $(mode + '-kassa').value : null;
       var kassCount = mode === 'zls' ? $(mode + '-kassCount').value : null;
       
-      rec = { mode: 'katering', // ИСПРАВЛЕНО ТУТ
+      rec = { mode: 'katering',
               point: $(mode + '-point').value, 
               kassa: kassa,
               kassCount: kassCount || null, 
