@@ -1110,7 +1110,7 @@ function openModal() {
           <button class="tg modal-tg ${mode}" id="modal-issue-${i}" onclick="toggleModalIssue(${i})">Выдача</button>
         </div>
       </div>
-      <input type="text" id="modal-note-${i}" placeholder="Примечание" value="${note}" oninput="modalData[${i}].note = this.value" style="height:36px; font-size:14px; text-align:left;">
+      <input type="text" id="modal-note-${i}" placeholder="Примечание" value="${note.replace(/"/g, '&quot;')}" oninput="modalData[${i}].note = this.value" style="height:36px; font-size:14px; text-align:left;">
     `;
     content.appendChild(block);
 
