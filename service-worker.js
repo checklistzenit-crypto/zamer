@@ -11,6 +11,10 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  
+  // ВОТ ЭТА СТРОКА: Не кешируем запросы к Google Apps Script
+  if (e.request.url.includes('script.google.com')) return; 
+
   e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
     const copy = res.clone();
     caches.open(CACHE).then(c => c.put(e.request, copy));
