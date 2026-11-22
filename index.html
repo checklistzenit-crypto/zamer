@@ -551,7 +551,8 @@ window.onerror = function (msg, src, line) {
 <script>
 var API = 'https://script.google.com/macros/s/AKfycbxtNHriDRJXNoNlRf3dqHTeI8klmNekkMNd4WOY0AFyvgZf48xeV3lfCyAAZv0aBZiAUA/exec';
 function $(id) { return document.getElementById(id); }
-
+var API_TOKEN = 'zamer_dolgiy_manage_it_98765';
+  
 var dict = { locked: false, points: [], operators: {}, inputs: [] };
 var mode = 'krs';
 
@@ -1013,7 +1014,7 @@ function sync() {
       return fetch(API, { 
         method: 'POST', 
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(rec) 
+        body: JSON.stringify( Object.assign({}, rec, { token: API_TOKEN }) )
       })
       .then(function (r) { return r.json(); })
       .then(function (j) {
@@ -1233,7 +1234,7 @@ function loadDict() {
   } catch(e) {}
 
   // 2. Тихонько обновляем данные с сервера
-  fetch(API, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+ fetch(API + '?token=' + API_TOKEN, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
     dict = j;
     localStorage.setItem('cached_dict', JSON.stringify(j)); 
     $('lockBar').style.display = dict.locked ? 'block' : 'none';
