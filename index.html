@@ -758,7 +758,6 @@ function pointInput(m) {
   var v = input.value.toUpperCase().replace(/\s+/g, ' '); 
   input.value = v; 
   
-  // Сохраняем в память (Шаг А)
   localStorage.setItem('saved_point_' + m, v);
   
   var checkV = v.replace(/УЛИЦА/g, '');
@@ -769,7 +768,6 @@ function pointInput(m) {
   
   input.classList.toggle('err', hasError); 
   
-  // Управление подсказками
   if (isBanned) {
     hint.textContent = 'Эта точка питания не участвует в замерах!';
     hint.style.display = 'block';
@@ -783,21 +781,20 @@ function pointInput(m) {
     hint.style.display = 'none';
   }  
   
-  // Очищаем список
   list.innerHTML = '';  
   
-  // Если поле пустое или есть ошибка — скрываем список и выходим
   if (!v || hasError) {
     list.style.display = 'none';
     return;  
   }
   
-  // Ищем совпадения
-  var mList = (dict.points || []).filter(function (p) { 
+  // ВЫБИРАЕМ НУЖНЫЙ СПИСОК ТОЧЕК
+  var pointsArray = (m === 'zls') ? (dict.pointsZLS || []) : (dict.pointsCHL || []);
+  
+  var mList = pointsArray.filter(function (p) { 
     return p.toUpperCase().indexOf(v) !== -1; 
   }); 
   
-  // Умная сортировка
   mList.sort(function(a, b) {
     var aStarts = a.toUpperCase().startsWith(v);
     var bStarts = b.toUpperCase().startsWith(v);
@@ -806,19 +803,15 @@ function pointInput(m) {
     return a.localeCompare(b);
   });
   
-  // Ограничиваем выдачу 10 вариантами
   mList = mList.slice(0, 10);  
   
-  // Если ничего не нашли — скрываем список
   if (mList.length === 0) {
     list.style.display = 'none';
     return;
   }
 
-  // ПОКАЗЫВАЕМ СПИСОК (свойство display: block)
   list.style.display = 'block';
   
-  // Отрисовываем список
   mList.forEach(function (p) {
     var d = document.createElement('div');
     d.textContent = p;
@@ -826,7 +819,7 @@ function pointInput(m) {
     list.appendChild(d);
   });
 }
-
+  
 function checkKassa(m) {
   if (m !== 'zls') return true; 
   
