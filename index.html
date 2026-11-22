@@ -1234,12 +1234,18 @@ function loadDict() {
   } catch(e) {}
 
   // 2. Тихонько обновляем данные с сервера
- fetch(API + '?token=' + API_TOKEN, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+  fetch(API + '?token=' + API_TOKEN, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+    // ПРОВЕРКА НА ОШИБКУ ДОСТУПА:
+    if (j.error === 'Unauthorized') {
+      status('Ошибка доступа: неверный токен!');
+      return;
+    }
+    
     dict = j;
     localStorage.setItem('cached_dict', JSON.stringify(j)); 
     $('lockBar').style.display = dict.locked ? 'block' : 'none';
     
-    checkAuthState(); // ПРОВЕРЯЕМ ПАРОЛЬ
+    checkAuthState();  // ПРОВЕРЯЕМ ПАРОЛЬ
 
     // Если админ заблокировал внесение — чистим сохраненные поля и пароль
     if (dict.locked) {
