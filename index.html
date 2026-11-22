@@ -70,12 +70,10 @@ body{
   0%, 100% { filter: brightness(1); }
   50% { filter: brightness(1.6); } /* +60% яркости */
 }
-.tab.running:not(.on) {
-  animation: pulseTabBright 3s infinite ease-in-out;
-}
+
 /* Применяем анимацию и задаем базовый цвет активной вкладки для мигающих табов */
 .tab.running:not(.on) {
-  animation: pulseTabBright 4s infinite ease-in-out;
+  animation: pulseTabBright 2.5s infinite ease-in-out;
 }
 .tab.krs.running:not(.on) { background-color: #255010; }
 .tab.zls.running:not(.on) { background-color: #003c61; }
@@ -539,6 +537,8 @@ window.onerror = function (msg, src, line) {
 <div id="status"></div>
 <!-- Модальное окно для экспорта кругов -->
 <div id="modalOverlay" class="modal-overlay" onclick="closeModal()"></div>
+<div id="modalError" style="color:#ff6b6b;font-size:13px;text-align:center;min-height:16px;"></div>
+<button class="btn" id="btnConfirmExport" onclick="confirmExport()">ПРОДОЛЖИТЬ ЭКСПОРТ</button>
 <div id="exportModal" class="modal-window">
   <button class="modal-close" onclick="closeModal()">✕</button>
   <h2>Данные по кругам</h2>
@@ -558,12 +558,10 @@ var mode = 'krs';
 
 // Хранилище состояний для каждой вкладки
 var states = {
-  krs: { mainRun: false, mainStart: 0, mainFinal: null, startLocal: null, stopLocal: null, laps: [] },
-  zls: { mainRun: false, mainStart: 0, mainFinal: null, startLocal: null, stopLocal: null, laps: [] },
-  chl: { mainRun: false, mainStart: 0, mainFinal: null, startLocal: null, stopLocal: null, laps: [] }
+  krs: { mainRun:false, mainStart:0, mainFinal:null, startLocal:null, stopLocal:null, laps:[], stopClicks:[] },
+  zls: { mainRun:false, mainStart:0, mainFinal:null, startLocal:null, stopLocal:null, laps:[], stopClicks:[] },
+  chl: { mainRun:false, mainStart:0, mainFinal:null, startLocal:null, stopLocal:null, laps:[], stopClicks:[] }
 };
-
-var stopClicks = [];
   
 function nowStr(d) {
   function p(n) { return String(n).padStart(2, '0'); }
@@ -594,10 +592,10 @@ function setDisplays() {
   ['krs', 'zls', 'chl'].forEach(function(m) {
     var tab = $(tabsMap[m]);
     if (tab) {
-      if (states[m].mainRun && mode !== m) {
-        tab.classList.add('running');
+      if ((states[m].mainRun || states[m].mainFinal !== null) && mode !== m) {
+      tab.classList.add('running');
       } else {
-        tab.classList.remove('running');
+      tab.classList.remove('running');
       }
     }
   });
@@ -713,12 +711,12 @@ function stop() {
     activeLap.endLocal = nowStr(new Date());
   }
   
-  stopClicks = stopClicks.filter(function (x) { return t - x < 3000; });
-  stopClicks.push(t);
-  if (stopClicks.length >= 3) { 
-    stopClicks = []; 
-    resetAll(false, mode); // Передаем текущую вкладку
-    return status('Форма сброшена'); 
+  state.stopClicks = state.stopClicks.filter(function (x) { return t - x < 3000; });
+  state.stopClicks.push(t);
+  if (state.stopClicks.length >= 3) {
+    state.stopClicks = [];
+    resetAll(false, mode);
+    return status('Форма сброшена');
   }
   
   setDisplays();
@@ -746,8 +744,8 @@ function resetAll(keepFields, targetMode) {
   if (!targetMode) targetMode = mode; // Если вкладка не указана, берем текущую
   
   // Сбрасываем таймер ТОЛЬКО для выбранной вкладки
-  states[targetMode] = { mainRun: false, mainStart: 0, mainFinal: null, startLocal: null, stopLocal: null, laps: [] };
-  
+  states[targetMode] = { mainRun: false, mainStart: 0, mainFinal: null, startLocal: null, stopLocal: null, laps: [], stopClicks: [] };
+
   if (!keepFields) {
     // ПОЛНАЯ ОЧИСТКА (3х СТОП)
     if (targetMode === 'krs') {
@@ -983,18 +981,38 @@ function sel(g) {
 /* ---------- экспорт ---------- */
 function exportRec() {
   if (dict.locked) return status('Записи заблокированы администратором');
-  
+
   var state = states[mode];
   if (state.mainRun) return status('Сначала нажмите СТОП');
   if (state.mainFinal === null) return status('Нет замера для экспорта');
 
-  // Если это не КРС и кругов 2 или больше — открываем модалку
+  if (mode !== 'krs') {
+    // Проверки точки — действуют и на обычный экспорт, и на экспорт через модалку
+    var point = $(mode + '-point').value;
+    if (!point) return status('Заполните «Номер точки»');
+    var checkPoint = point.replace(/УЛИЦА/g, '');
+    if (/[А-ЯЁ]/.test(checkPoint)) return status('Используй латиницу!');
+    if (/^MT[^ ]/.test(point) && point.length > 2) return status('Поставь пробел после MT!');
+    if ((dict.bannedPoints || []).indexOf(point) !== -1) return status('Эта точка питания не участвует в замерах!');
+    var pointsArray = (mode === 'zls') ? (dict.pointsZLS || []) : (dict.pointsCHL || []);
+    if (pointsArray.length && pointsArray.indexOf(point) === -1) return status('Точки «' + point + '» нет в списке точек');
+
+    // Очередь нужна при любом экспорте с кругами (основной таймер = простой очереди)
+    if (state.laps.length >= 1 && !$(mode + '-queue').value) return status('Заполните «Человек в очереди»');
+
+    // Касса на основном экране обязательна только при обычном экспорте;
+    // при 2+ кругах каждую кассу проверит модалка (confirmExport)
+    if (mode === 'zls' && state.laps.length < 2) {
+      if (!$(mode + '-kassa').value) return status('Заполните «Номер кассы»');
+      if (!checkKassa('zls')) return status('Номер не может быть больше количества работающих касс!');
+    }
+  }
+
   if (mode !== 'krs' && state.laps.length >= 2) {
     openModal();
     return;
   }
 
-  // В остальных случаях (КРС или 0-1 круг) — экспортируем сразу
   executeExport([], false);
 }
 
@@ -1055,6 +1073,7 @@ document.addEventListener('click', function(e) {
 let modalData = []; // Временное хранилище для данных из модалки
 
 function openModal() {
+  $('modalError').textContent = '';
   var state = states[mode];
   var point = $(mode + '-point').value;
   var content = $('modalContent');
@@ -1128,6 +1147,20 @@ function toggleModalIssue(i) {
   modalData[i].issue = is.classList.contains('on');
 }
 
+function confirmExport() {
+  if (mode === 'zls') {
+    for (let i = 0; i < modalData.length; i++) {
+      if (!modalData[i].kassa) {
+        $('modalError').textContent = 'Укажите номер кассы для Круга ' + (i + 1) + '!';
+        return;
+      }
+    }
+  }
+  $('modalError').textContent = '';
+  closeModal();
+  executeExport(modalData, true);
+}
+  
 function confirmExport() {
   // Проверяем, что на ЗЛС везде указаны кассы
   if (mode === 'zls') {
