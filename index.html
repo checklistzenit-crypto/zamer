@@ -337,10 +337,40 @@ input.err{background:#590d0b}
 .modal-lap-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .modal-lap-inputs input { height: 36px; font-size: 14px; }
 #btnConfirmExport { width: 100%; font-size: 18px; padding: 16px; background: #132914; color: #0f0; }
+
+/* Экран пароля */
+.auth-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: #000; z-index: 9999;
+  display: none; /* Скрыт по умолчанию */
+  align-items: center; justify-content: center;
+  padding: 20px;
+}
+.auth-box {
+  background: #1c1c1c; padding: 30px 20px; border-radius: 16px;
+  width: 100%; max-width: 320px; text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+}
+.auth-box h2 { margin-top: 0; margin-bottom: 10px; font-size: 22px; }
+#authPasswordInput {
+  font-size: 32px; text-align: center; letter-spacing: 8px;
+  height: 60px; border-radius: 12px;
+}  
   
 </style>
 </head>
 <body>
+
+<!-- Экран ввода пароля -->
+<div id="authOverlay" class="auth-overlay">
+  <div class="auth-box">
+    <h2>Введите пароль</h2>
+    <p style="color:#aaa; font-size:14px; margin-bottom:20px;">Запросите код у администратора</p>
+    <input type="number" id="authPasswordInput" inputmode="numeric" maxlength="6" placeholder="******">
+    <button class="btn" onclick="checkAuthPassword()" style="background:#003c61; color:#fff; width:100%; margin-top:15px;">ВОЙТИ</button>
+    <div id="authError" style="color:#ff6b6b; margin-top:15px; font-size:14px; display:none;">Неверный пароль</div>
+  </div>
+</div>
 
 <script>
 window.onerror = function (msg, src, line) {
@@ -1192,31 +1222,57 @@ function executeExport(modalLaps, isMultiLap) {
 }
   
 function loadDict() {
-  // 1. Сразу берем данные из кэша телефона (моментальная загрузка)
+  // 1. Сразу берем данные из кэша телефона
   try {
     var cached = localStorage.getItem('cached_dict');
     if (cached) {
       dict = JSON.parse(cached);
       $('lockBar').style.display = dict.locked ? 'block' : 'none';
+      checkAuthState();
     }
   } catch(e) {}
 
   // 2. Тихонько обновляем данные с сервера
   fetch(API).then(function (r) { return r.json(); }).then(function (j) {
     dict = j;
-    localStorage.setItem('cached_dict', JSON.stringify(j)); // Сохраняем в память
+    localStorage.setItem('cached_dict', JSON.stringify(j)); 
     $('lockBar').style.display = dict.locked ? 'block' : 'none';
     
-    // Если админ заблокировал внесение — чистим сохраненные поля
+    checkAuthState(); // ПРОВЕРЯЕМ ПАРОЛЬ
+
+    // Если админ заблокировал внесение — чистим сохраненные поля и пароль
     if (dict.locked) {
       localStorage.removeItem('saved_entry');
       localStorage.removeItem('saved_point_zls');
       localStorage.removeItem('saved_point_chl');
+      localStorage.removeItem('auth_password'); // СТИРАЕМ ПАРОЛЬ
       $('entry').value = '';
       $('zls-point').value = '';
       $('chl-point').value = '';
     }
   }).catch(function () {});
+}
+
+// Новая функция для проверки авторизации
+function checkAuthState() {
+  if (dict.locked) {
+    // Если внесение заблокировано, просто показываем красную плашку, пароль не спрашиваем
+    $('authOverlay').style.display = 'none';
+    return;
+  }
+  
+  // Если есть пароль на сервере, проверяем его
+  if (dict.dailyPassword) {
+    var saved = localStorage.getItem('auth_password');
+    if (saved !== dict.dailyPassword) {
+      $('authOverlay').style.display = 'flex'; // Показываем экран ввода
+    } else {
+      $('authOverlay').style.display = 'none'; // Прячем
+    }
+  } else {
+    // Если админ забыл сгенерировать пароль, не блокируем работу
+    $('authOverlay').style.display = 'none'; 
+  }
 }
 
 window.addEventListener('online', sync);
@@ -1234,6 +1290,17 @@ if (sZls) $('zls-point').value = sZls;
 var sChl = localStorage.getItem('saved_point_chl');
 if (sChl) $('chl-point').value = sChl;
 
+function checkAuthPassword() {
+  var input = $('authPasswordInput').value.trim();
+  if (input === dict.dailyPassword) {
+    localStorage.setItem('auth_password', input); // Запоминаем
+    $('authOverlay').style.display = 'none';
+    $('authError').style.display = 'none';
+  } else {
+    $('authError').style.display = 'block';
+  }
+}
+  
 </script>
 </body>
 </html>
