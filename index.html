@@ -280,6 +280,8 @@ input.err{background:#590d0b}
   background: rgba(0,0,0,0.8); z-index: 100;
   display: none; opacity: 0; transition: opacity 0.3s ease;
 }
+.modal-overlay.active { display: block; opacity: 1; }
+
 .modal-window {
   position: fixed; bottom: 0; left: 0; right: 0;
   max-width: 480px; margin: 0 auto;
@@ -287,17 +289,23 @@ input.err{background:#590d0b}
   border-radius: 16px 16px 0 0;
   padding: 20px 16px calc(env(safe-area-inset-bottom) + 20px);
   z-index: 101;
-  transform: translateY(100%); transition: transform 0.3s ease;
+  transform: translateY(100%); 
+  transition: transform 0.3s ease, visibility 0.3s;
+  visibility: hidden; /* Жестко скрываем */
+  pointer-events: none;
   max-height: 85vh; display: flex; flex-direction: column;
 }
-.modal-window.active { transform: translateY(0); }
-.modal-overlay.active { display: block; opacity: 1; }
-.modal-close {
-  position: absolute; top: 16px; right: 16px;
-  background: #333; color: #fff; border: 0; border-radius: 50%;
-  width: 32px; height: 32px; font-size: 16px; display: flex;
-  align-items: center; justify-content: center;
+
+.modal-window.active { 
+  transform: translateY(0); 
+  visibility: visible;
+  pointer-events: auto;
 }
+
+/* НОВОЕ: Цвета активных тоглов внутри модалки */
+.modal-tg.zls.on { background: #003c61; }
+.modal-tg.chl.on { background: #4a0018; }
+  
 .modal-window h2 { margin: 0 0 16px 0; font-size: 18px; text-align: center; }
 .modal-content { overflow-y: auto; margin-bottom: 16px; flex: 1; }
 .modal-lap-block {
@@ -1027,8 +1035,8 @@ function openModal() {
           <input type="number" id="modal-kassa-${i}" placeholder="№ Кассы" value="${kassa}" oninput="modalData[${i}].kassa = this.value">
         ` : '<div></div>'}
         <div class="toggles" style="height: 36px; padding: 2px;">
-          <button class="tg" id="modal-print-${i}" onclick="toggleModalPrint(${i})">Печать</button>
-          <button class="tg" id="modal-issue-${i}" onclick="toggleModalIssue(${i})">Выдача</button>
+          <button class="tg modal-tg ${mode}" id="modal-print-${i}" onclick="toggleModalPrint(${i})">Печать</button>
+          <button class="tg modal-tg ${mode}" id="modal-issue-${i}" onclick="toggleModalIssue(${i})">Выдача</button>
         </div>
       </div>
       <input type="text" id="modal-note-${i}" placeholder="Примечание" value="${note}" oninput="modalData[${i}].note = this.value" style="height:36px; font-size:14px; text-align:left;">
@@ -1105,7 +1113,8 @@ function executeExport(modalLaps, isMultiLap) {
         let lap = state.laps[i];
         let m = modalLaps[i];
         q.push({
-          mode: mode, is_lap_only: true,
+          mode: 'katering', // ИСПРАВЛЕНО ТУТ
+          is_lap_only: true,
           point: $(mode + '-point').value, kassa: m.kassa || null,
           print: m.print, issue: m.issue, note: m.note,
           lapLocal: lap.startLocal, lapSec: Math.round((lap.end - lap.start) / 1000)
@@ -1116,7 +1125,8 @@ function executeExport(modalLaps, isMultiLap) {
       let lastLap = state.laps[state.laps.length - 1];
       let lastM = modalLaps[modalLaps.length - 1];
       q.push({
-        mode: mode, is_lap_only: false,
+        mode: 'katering', // ИСПРАВЛЕНО ТУТ
+        is_lap_only: false,
         point: $(mode + '-point').value, kassa: lastM.kassa || null,
         kassCount: $(mode + '-kassCount').value || null, 
         staff: $(mode + '-staff').value || null, queue: $(mode + '-queue').value || null,
@@ -1130,12 +1140,21 @@ function executeExport(modalLaps, isMultiLap) {
       var hadLap = state.laps.length > 0;
       var lapSec = hadLap ? Math.round((state.laps[0].end - state.laps[0].start) / 1000) : null;
       var lapLocal = hadLap ? state.laps[0].startLocal : null;
-      rec = { mode: mode, point: $(mode + '-point').value, kassa: $(mode + '-kassa') ? $(mode + '-kassa').value : null,
-              kassCount: $(mode + '-kassCount').value || null, staff: $(mode + '-staff').value || null, 
+      
+      var kassa = mode === 'zls' ? $(mode + '-kassa').value : null;
+      var kassCount = mode === 'zls' ? $(mode + '-kassCount').value : null;
+      
+      rec = { mode: 'katering', // ИСПРАВЛЕНО ТУТ
+              point: $(mode + '-point').value, 
+              kassa: kassa,
+              kassCount: kassCount || null, 
+              staff: $(mode + '-staff').value || null, 
               queue: $(mode + '-queue').value || null,
-              print: $(mode + '-chkPrint').classList.contains('on'), issue: $(mode + '-chkIssue').classList.contains('on'),
+              print: $(mode + '-chkPrint').classList.contains('on'), 
+              issue: $(mode + '-chkIssue').classList.contains('on'),
               note: $(mode + '-noteKt').value, hadLap: hadLap, startLocal: state.startLocal, lapLocal: lapLocal,
               mainSec: Math.round(state.mainFinal / 1000), lapSec: lapSec };
+              
       var q = getQ(); q.push(rec); saveQ(q);
     }
   }
