@@ -1,5 +1,10 @@
-const CACHE = 'zamer-v4.26';
-const ASSETS = ['./', './index.html', './manifest.json', './icon.png'];
+const CACHE = 'zamer-v4.27';
+const ASSETS = [
+  './',
+  './index.html',
+  './icon.png',
+  './manifest.json'
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
