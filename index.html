@@ -537,14 +537,13 @@ window.onerror = function (msg, src, line) {
 <div id="status"></div>
 <!-- Модальное окно для экспорта кругов -->
 <div id="modalOverlay" class="modal-overlay" onclick="closeModal()"></div>
-<div id="modalError" style="color:#ff6b6b;font-size:13px;text-align:center;min-height:16px;"></div>
-<button class="btn" id="btnConfirmExport" onclick="confirmExport()">ПРОДОЛЖИТЬ ЭКСПОРТ</button>
 <div id="exportModal" class="modal-window">
   <button class="modal-close" onclick="closeModal()">✕</button>
   <h2>Данные по кругам</h2>
   <div id="modalContent" class="modal-content">
     <!-- Сюда будут генерироваться блоки кругов -->
   </div>
+  <div id="modalError" style="color:#ff6b6b;font-size:13px;text-align:center;min-height:16px;"></div>
   <button class="btn" id="btnConfirmExport" onclick="confirmExport()">ПРОДОЛЖИТЬ ЭКСПОРТ</button>
 </div>
   
@@ -688,9 +687,7 @@ function lap() {
   }
   
   if (state.laps.length < 4) {
-    state.laps.push({ start: Date.now(), end: null, startLocal: nowStr(new Date()), endLocal: null });
-  } else {
-    status('Достигнут максимум (4 круга)');
+      state.laps.push({ start: Date.now(), end: null, startLocal: nowStr(new Date()), endLocal: null });
   }
   setDisplays();
 }
@@ -750,14 +747,14 @@ function resetAll(keepFields, targetMode) {
     // ПОЛНАЯ ОЧИСТКА (3х СТОП)
     if (targetMode === 'krs') {
       $('entry').value = ''; $('bib').value = ''; $('noteK').value = '';
-      localStorage.removeItem('saved_entry');
+      sessionStorage.removeItem('saved_entry');
     } else if (targetMode === 'zls') {
       $('zls-point').value = ''; $('zls-kassa').value = ''; $('zls-kassCount').value = ''; 
       $('zls-staff').value = ''; $('zls-queue').value = ''; $('zls-noteKt').value = '';
-      localStorage.removeItem('saved_point_zls');
+      sessionStorage.removeItem('saved_point_zls');
     } else if (targetMode === 'chl') {
       $('chl-point').value = ''; $('chl-staff').value = ''; $('chl-queue').value = ''; $('chl-noteKt').value = '';
-      localStorage.removeItem('saved_point_chl');
+      sessionStorage.removeItem('saved_point_chl');
     }
   } else {
     // ЧАСТИЧНАЯ ОЧИСТКА (после ЭКСПОРТА)
@@ -790,7 +787,7 @@ function entryInput() {
   $('entry').value = val;
   
   // СОХРАНЯЕМ В ПАМЯТЬ:
-  localStorage.setItem('saved_entry', val);
+  sessionStorage.setItem('saved_entry', val);
 
   var isInvalid = false;
   if (val && dict.inputs && dict.inputs.length > 0) {
@@ -802,19 +799,20 @@ function entryInput() {
 function showBibs() {
   var entry = $('entry').value;
   var list = $('bibList');
-  list.innerHTML = ''; 
-  
-  if (!entry || !dict.bibs || !dict.bibs[entry]) {
+  list.innerHTML = '';
+
+  var all = bibListFor(entry);
+  if (all.length === 0) {
     list.style.display = 'none'; // Скрываем, если пусто
     return;
   }
 
   list.style.display = 'block'; // Показываем
-  dict.bibs[entry].forEach(function(b) {
+  all.forEach(function(b) {
     var div = document.createElement('div');
     div.textContent = b;
-    div.onclick = function() { 
-      $('bib').value = b; 
+    div.onclick = function() {
+      $('bib').value = b;
       list.style.display = 'none'; // Прячем после выбора
     };
     list.appendChild(div);
@@ -826,16 +824,17 @@ function bibInput() {
   var entry = $('entry').value;
   var list = $('bibList');
   list.innerHTML = '';
-  
-  if (!v || !entry || !dict.bibs || !dict.bibs[entry]) {
+
+  var all = bibListFor(entry);
+  if (!v || all.length === 0) {
     list.style.display = 'none';
     return;
   }
 
-  var matches = dict.bibs[entry].filter(function(b) { 
-    return b.indexOf(v) !== -1; 
+  var matches = all.filter(function(b) {
+    return b.indexOf(v) !== -1;
   });
-  
+
   if (matches.length === 0) {
     list.style.display = 'none';
     return;
@@ -845,9 +844,9 @@ function bibInput() {
   matches.forEach(function(b) {
     var div = document.createElement('div');
     div.textContent = b;
-    div.onclick = function() { 
-      $('bib').value = b; 
-      list.style.display = 'none'; 
+    div.onclick = function() {
+      $('bib').value = b;
+      list.style.display = 'none';
     };
     list.appendChild(div);
   });
@@ -861,7 +860,7 @@ function pointInput(m) {
   var v = input.value.toUpperCase().replace(/\s+/g, ' '); 
   input.value = v; 
   
-  localStorage.setItem('saved_point_' + m, v);
+  sessionStorage.setItem('saved_point_' + m, v);
   
   var checkV = v.replace(/УЛИЦА/g, '');
   var hasCyrillic = /[А-ЯЁ]/.test(checkV); 
@@ -1017,6 +1016,36 @@ function exportRec() {
 }
 
 /* ---------- очередь и синхронизация ---------- */
+/* ---------- локальный список манишек ---------- */
+function getLocalBibs() {
+  try { return JSON.parse(localStorage.getItem('local_bibs') || '{}'); } catch (e) { return {}; }
+}
+function saveLocalBibs(o) { localStorage.setItem('local_bibs', JSON.stringify(o)); }
+
+function addLocalBib(entry, bib) {
+  if (!entry || !bib) return;
+  var all = getLocalBibs();
+  var day = nowStr(new Date()).split(' ')[0];
+  var rec = all[entry];
+  if (!rec || rec.day !== day) rec = { day: day, list: [] };
+  if (rec.list.indexOf(bib) === -1) rec.list.push(bib);
+  all[entry] = rec;
+  saveLocalBibs(all);
+}
+
+function bibListFor(entry) {
+  var merged = [];
+  var local = getLocalBibs()[entry];
+  var day = nowStr(new Date()).split(' ')[0];
+  if (local && local.day === day) merged = merged.concat(local.list);
+  if (dict.bibs && dict.bibs[entry]) {
+    dict.bibs[entry].forEach(function (b) {
+      if (merged.indexOf(b) === -1) merged.push(b);
+    });
+  }
+  return merged;
+}
+  
 function getQ() { try { return JSON.parse(localStorage.getItem('zamer') || '[]'); } catch (e) { return []; } }
 function saveQ(q) { localStorage.setItem('zamer', JSON.stringify(q)); }
 var syncing = false;
@@ -1032,7 +1061,7 @@ function sync() {
       return fetch(API, { 
         method: 'POST', 
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify( Object.assign({}, rec, { token: API_TOKEN }) )
+        body: JSON.stringify( Object.assign({}, rec, { token: API_TOKEN, pass: localStorage.getItem('auth_password') }) )
       })
       .then(function (r) { return r.json(); })
       .then(function (j) {
@@ -1160,17 +1189,6 @@ function confirmExport() {
   closeModal();
   executeExport(modalData, true);
 }
-  
-function confirmExport() {
-  // Проверяем, что на ЗЛС везде указаны кассы
-  if (mode === 'zls') {
-    for (let i = 0; i < modalData.length; i++) {
-      if (!modalData[i].kassa) return status(`Укажите номер кассы для Круга ${i+1}!`);
-    }
-  }
-  closeModal();
-  executeExport(modalData, true);
-}
 
 function executeExport(modalLaps, isMultiLap) {
   var state = states[mode];
@@ -1189,6 +1207,7 @@ function executeExport(modalLaps, isMultiLap) {
     rec = { mode: 'krs', entry: entry, kontur: kontur, osmotr: osmotr, bib: bib,
             durSec: Math.round(state.mainFinal / 1000), note: $('noteK').value, startLocal: state.startLocal };
     var q = getQ(); q.push(rec); saveQ(q);
+        addLocalBib(entry, bib);
   } else {
     // Если кругов 2 и больше (модалка)
     if (isMultiLap && state.laps.length >= 2) {
@@ -1282,9 +1301,10 @@ function loadDict() {
 
     // Если админ заблокировал внесение — чистим сохраненные поля и пароль
     if (dict.locked) {
-      localStorage.removeItem('saved_entry');
-      localStorage.removeItem('saved_point_zls');
-      localStorage.removeItem('saved_point_chl');
+      sessionStorage.removeItem('saved_entry');
+      sessionStorage.removeItem('saved_point_zls');
+      sessionStorage.removeItem('saved_point_chl');
+      localStorage.removeItem('local_bibs');
       localStorage.removeItem('auth_password'); // СТИРАЕМ ПАРОЛЬ
       $('entry').value = '';
       $('zls-point').value = '';
@@ -1323,11 +1343,11 @@ loadDict();
 setDisplays();
 
 // Восстанавливаем сохраненные поля при открытии приложения
-var sEntry = localStorage.getItem('saved_entry');
+var sEntry = sessionStorage.getItem('saved_entry');
 if (sEntry) $('entry').value = sEntry;
-var sZls = localStorage.getItem('saved_point_zls');
+var sZls = sessionStorage.getItem('saved_point_zls');
 if (sZls) $('zls-point').value = sZls;
-var sChl = localStorage.getItem('saved_point_chl');
+var sChl = sessionStorage.getItem('saved_point_chl');
 if (sChl) $('chl-point').value = sChl;
 
 function checkAuthPassword() {
