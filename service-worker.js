@@ -1,4 +1,4 @@
-const CACHE = 'zamer-v4.28';
+const CACHE = 'zamer-v4.29';
 const ASSETS = [
   './',
   './index.html',
