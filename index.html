@@ -354,6 +354,13 @@ input.err{background:#590d0b}
   font-size: 32px; text-align: center; letter-spacing: 8px;
   height: 60px; border-radius: 12px;
 }  
+.auth-logo {
+  display: block;
+  margin: 12px auto 15px;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
   
 </style>
 </head>
@@ -366,6 +373,7 @@ input.err{background:#590d0b}
     <p style="color:#aaa; font-size:14px; margin-bottom:20px;">Запросите код у администратора</p>
     <input type="number" id="authPasswordInput" inputmode="numeric" maxlength="6" placeholder="******">
     <button class="btn" onclick="checkAuthPassword()" style="background:#003c61; color:#fff; width:100%; margin-top:15px;">ВОЙТИ</button>
+    <img src="logo.png" alt="Логотип" class="auth-logo">
     <div id="authError" style="color:#ff6b6b; margin-top:15px; font-size:14px; display:none;">Неверный пароль</div>
   </div>
 </div>
