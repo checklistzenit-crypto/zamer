@@ -832,41 +832,75 @@ function entryInput() {
   $('entryHint').style.display = isInvalid ? 'block' : 'none';
 }
 
+// Считает частоту манишек для конкретной входной, объединяя данные с сервера и локальной очереди
+function getBibCounts(entry) {
+  var counts = {};
+  
+  // 1. Берем данные с сервера (последние 200 записей)
+  if (dict.bibs && dict.bibs[entry]) {
+    for (var bib in dict.bibs[entry]) {
+      if (dict.bibs[entry].hasOwnProperty(bib)) {
+        counts[bib] = dict.bibs[entry][bib];
+      }
+    }
+  }
+  
+  // 2. Добавляем записи из локальной очереди (которые еще не ушли на сервер)
+  var queue = getQ();
+  queue.forEach(function(rec) {
+    if (rec.mode === 'krs' && rec.entry === entry && rec.bib) {
+      var bibStr = String(rec.bib).trim();
+      if (bibStr) {
+        counts[bibStr] = (counts[bibStr] || 0) + 1;
+      }
+    }
+  });
+  
+  return counts;
+}
+  
 function showBibs() {
   var entry = $('entry').value;
   var list = $('bibList');
   list.innerHTML = ''; 
   
-  if (!entry || !dict.bibs || !dict.bibs[entry]) {
+  if (!entry) {
     list.style.display = 'none'; 
     return;
   }
 
-  list.style.display = 'block'; 
-  var bibsObj = dict.bibs[entry];
+  // Получаем объединенные данные (сервер + локальная очередь)
+  var bibsObj = getBibCounts(entry);
   
-  // Проходим по объекту манишек
-  for (var bib in bibsObj) {
-    if (bibsObj.hasOwnProperty(bib)) {
-      var count = bibsObj[bib];
-      var div = document.createElement('div');
-      div.className = 'suggest-item';
-      
-      div.innerHTML = `
-        <span class="suggest-bib">${bib}</span>
-        <span class="suggest-count">${count}</span>
-      `;
-      
-      div.onclick = function(bibVal) {
-        return function() {
-          $('bib').value = bibVal;
-          list.style.display = 'none';
-        };
-      }(bib);
-      
-      list.appendChild(div);
-    }
+  if (Object.keys(bibsObj).length === 0) {
+    list.style.display = 'none';
+    return;
   }
+
+  list.style.display = 'block'; 
+  
+  // Сортируем манишки по убыванию частоты (те, что чаще — выше)
+  var sortedBibs = Object.keys(bibsObj).sort(function(a, b) {
+    return bibsObj[b] - bibsObj[a];
+  });
+  
+  sortedBibs.forEach(function(bib) {
+    var count = bibsObj[bib];
+    var div = document.createElement('div');
+    div.className = 'suggest-item';
+    
+    div.innerHTML = `
+      <span class="suggest-bib">${bib}</span>
+      <span class="suggest-count">${count}</span>
+    `;
+    
+    div.onclick = function() {
+      $('bib').value = bib;
+      list.style.display = 'none';
+    };
+    
+    list.appendChild(div);
+  });
 }
   
 function bibInput() {
@@ -875,15 +909,14 @@ function bibInput() {
   var list = $('bibList');
   list.innerHTML = '';
   
-  if (!v || !entry || !dict.bibs || !dict.bibs[entry]) {
+  if (!v || !entry) {
     list.style.display = 'none';
     return;
   }
 
-  var bibsObj = dict.bibs[entry];
+  var bibsObj = getBibCounts(entry);
   var matches = [];
   
-  // Фильтруем по введенному значению
   for (var bib in bibsObj) {
     if (bibsObj.hasOwnProperty(bib) && bib.indexOf(v) !== -1) {
       matches.push({ bib: bib, count: bibsObj[bib] });
@@ -894,6 +927,15 @@ function bibInput() {
     list.style.display = 'none';
     return;
   }
+  
+  // Сортируем: сначала те, что начинаются с введенных символов, потом по частоте
+  matches.sort(function(a, b) {
+    var aStarts = a.bib.startsWith(v);
+    var bStarts = b.bib.startsWith(v);
+    if (aStarts && !bStarts) return -1;
+    if (!aStarts && bStarts) return 1;
+    return b.count - a.count;
+  });
 
   list.style.display = 'block';
   matches.forEach(function(item) {
