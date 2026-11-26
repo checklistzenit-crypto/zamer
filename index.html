@@ -835,24 +835,38 @@ function entryInput() {
 // Считает частоту манишек для конкретной входной, объединяя данные с сервера и локальной очереди
 function getBibCounts(entry) {
   var counts = {};
+  var kontur = sel('kontur');
+  var osmotr = sel('osmotr');
   
-  // 1. Берем данные с сервера (последние 200 записей)
+  function addToCounts(bib, k, o, count) {
+    // Фильтр по тоглам: если контур/осмотр выбраны, проверяем совпадение
+    if (kontur && k !== kontur) return;
+    if (osmotr && o !== osmotr) return;
+    counts[bib] = (counts[bib] || 0) + count;
+  }
+  
+  // 1. Данные с сервера
   if (dict.bibs && dict.bibs[entry]) {
     for (var bib in dict.bibs[entry]) {
       if (dict.bibs[entry].hasOwnProperty(bib)) {
-        counts[bib] = dict.bibs[entry][bib];
+        for (var combo in dict.bibs[entry][bib]) {
+          if (dict.bibs[entry][bib].hasOwnProperty(combo)) {
+            var parts = combo.split('|');
+            addToCounts(bib, parts[0], parts[1], dict.bibs[entry][bib][combo]);
+          }
+        }
       }
     }
   }
   
-  // 2. Добавляем записи из локальной очереди (которые еще не ушли на сервер)
+  // 2. Локальная очередь (если нет сети)
   var queue = getQ();
   queue.forEach(function(rec) {
     if (rec.mode === 'krs' && rec.entry === entry && rec.bib) {
       var bibStr = String(rec.bib).trim();
-      if (bibStr) {
-        counts[bibStr] = (counts[bibStr] || 0) + 1;
-      }
+      var k = String(rec.kontur || '').trim();
+      var o = String(rec.osmotr || '').trim();
+      if (bibStr) addToCounts(bibStr, k, o, 1);
     }
   });
   
@@ -1072,13 +1086,14 @@ function pick(el) {
   var buttons = document.querySelectorAll('[data-group="' + group + '"] .tg');
   for (var i = 0; i < buttons.length; i++) buttons[i].classList.remove('on');
   el.classList.add('on');
-}
 
-function sel(g) {
-  var wrap = document.querySelector('[data-group="' + g + '"]');
-  if (!wrap) return '';
-  var b = wrap.querySelector('.on');
-  return b ? b.getAttribute('data-val') : '';
+  // НОВОЕ: Если изменили контур или осмотр — обновляем список манишек
+  if (group === 'kontur' || group === 'osmotr') {
+    var bibList = $('bibList');
+    if (bibList && bibList.style.display === 'block') {
+      showBibs();
+    }
+  }
 }
 
 /* ---------- экспорт ---------- */
