@@ -839,21 +839,28 @@ function getBibCounts(entry) {
   var osmotr = sel('osmotr');
   
   function addToCounts(bib, k, o, count) {
-    // Фильтр по тоглам: если контур/осмотр выбраны, проверяем совпадение
+    // Фильтр по тоглам: если выбрано — проверяем совпадение
     if (kontur && k !== kontur) return;
     if (osmotr && o !== osmotr) return;
     counts[bib] = (counts[bib] || 0) + count;
   }
   
-  // 1. Данные с сервера
+  // 1. Данные с сервера (новый формат с группировкой)
   if (dict.bibs && dict.bibs[entry]) {
     for (var bib in dict.bibs[entry]) {
       if (dict.bibs[entry].hasOwnProperty(bib)) {
-        for (var combo in dict.bibs[entry][bib]) {
-          if (dict.bibs[entry][bib].hasOwnProperty(combo)) {
-            var parts = combo.split('|');
-            addToCounts(bib, parts[0], parts[1], dict.bibs[entry][bib][combo]);
+        var combos = dict.bibs[entry][bib];
+        // Проверяем, объект это или число (на случай старого кеша)
+        if (typeof combos === 'object' && combos !== null) {
+          for (var combo in combos) {
+            if (combos.hasOwnProperty(combo)) {
+              var parts = combo.split('|');
+              addToCounts(bib, parts[0], parts[1], combos[combo]);
+            }
           }
+        } else {
+          // Если пришло старое число — просто добавляем его
+          addToCounts(bib, '', '', combos);
         }
       }
     }
@@ -883,8 +890,7 @@ function showBibs() {
     return;
   }
 
-  // Получаем объединенные данные (сервер + локальная очередь)
-  var bibsObj = getBibCounts(entry);
+  var bibsObj = getBibCounts(entry); // ← Вот здесь мы получаем уже ЧИСЛА
   
   if (Object.keys(bibsObj).length === 0) {
     list.style.display = 'none';
@@ -893,13 +899,12 @@ function showBibs() {
 
   list.style.display = 'block'; 
   
-  // Сортируем манишки по убыванию частоты (те, что чаще — выше)
   var sortedBibs = Object.keys(bibsObj).sort(function(a, b) {
     return bibsObj[b] - bibsObj[a];
   });
   
   sortedBibs.forEach(function(bib) {
-    var count = bibsObj[bib];
+    var count = bibsObj[bib]; // ← Это уже число
     var div = document.createElement('div');
     div.className = 'suggest-item';
     
@@ -942,7 +947,6 @@ function bibInput() {
     return;
   }
   
-  // Сортируем: сначала те, что начинаются с введенных символов, потом по частоте
   matches.sort(function(a, b) {
     var aStarts = a.bib.startsWith(v);
     var bStarts = b.bib.startsWith(v);
