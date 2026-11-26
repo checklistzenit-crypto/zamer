@@ -824,6 +824,17 @@ function entryInput() {
   // СОХРАНЯЕМ В ПАМЯТЬ:
   sessionStorage.setItem('saved_entry', val);
 
+  // --- НОВОЕ: Автовыбор тогла "Теплый" для фиксированных входных ---
+  var fixedEntries = ['G12', 'G13', 'G14', 'G16'];
+  if (fixedEntries.indexOf(val) !== -1) {
+    var tepliyBtn = document.querySelector('[data-group="kontur"] [data-val="Теплый"]');
+    // Если кнопка найдена и еще не активна — нажимаем её
+    if (tepliyBtn && !tepliyBtn.classList.contains('on')) {
+      pick(tepliyBtn); 
+    }
+  }
+  // -------------------------------------------------------------
+
   var isInvalid = false;
   if (val && dict.inputs && dict.inputs.length > 0) {
     if (dict.inputs.indexOf(val) === -1) isInvalid = true;
