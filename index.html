@@ -1188,6 +1188,16 @@ var syncing = false;
 
 function sync() {
   if (syncing || dict.locked) return;
+  
+  // --- НОВОЕ: Не отправляем, если пароль не введен или устарел ---
+  var savedPass = localStorage.getItem('auth_password');
+  var currentPass = dict.dailyPassword || '';
+  if (currentPass && savedPass !== currentPass) {
+    // Пароль еще не введен или изменился — останавливаем синхронизацию
+    status('Введите актуальный пароль для синхронизации');
+    return;
+  }
+  // ---------------------------------------------------------------  
   syncing = true;
   var rest = [];
   var chain = Promise.resolve();
@@ -1197,11 +1207,19 @@ function sync() {
       return fetch(API, { 
         method: 'POST', 
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify( Object.assign({}, rec, { token: API_TOKEN, pass: localStorage.getItem('auth_password') }) )
+        body: JSON.stringify( Object.assign({}, rec, { token: API_TOKEN, pass: savedPass }) )
       })
       .then(function (r) { return r.json(); })
       .then(function (j) {
-        if (!j.ok) { rest.push(rec); status(j.error || 'Ошибка отправки'); }
+        if (!j.ok) { 
+          rest.push(rec); 
+          // Если пароль неверный, показываем подсказку
+          if (j.error && j.error.indexOf('парол') !== -1) {
+            localStorage.removeItem('auth_password');
+            checkAuthState(); // Снова показываем экран ввода
+          }
+          status(j.error || 'Ошибка отправки'); 
+        }
       });
     }).catch(function () { rest.push(rec); });
   });
@@ -1329,6 +1347,14 @@ function confirmExport() {
 function executeExport(modalLaps, isMultiLap) {
   var state = states[mode];
   var rec;
+
+  // --- НОВОЕ: Проверка пароля перед экспортом ---
+  var savedPass = localStorage.getItem('auth_password');
+  if (dict.dailyPassword && savedPass !== dict.dailyPassword) {
+    checkAuthState(); // Показываем экран ввода
+    return status('Сначала введите актуальный пароль');
+  }
+  // ----------------------------------------------
   
   if (mode === 'krs') {
     var entry = $('entry').value, bib = $('bib').value;
