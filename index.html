@@ -642,7 +642,7 @@ function setDisplays() {
   if ($('main').textContent !== mainText) $('main').textContent = mainText;
 
   // 3. Обновление блоков кругов
-    var lapsContainer = $('lapsContainer');
+  var lapsContainer = $('lapsContainer');
   var formContainer = document.querySelector('.form-container');
   
   if (mode === 'krs') {
@@ -833,6 +833,13 @@ function entryInput() {
 }
 
 // Считает частоту манишек для конкретной входной, объединяя данные с сервера и локальной очереди
+function sel(g) {
+  var wrap = document.querySelector('[data-group="' + g + '"]');
+  if (!wrap) return '';
+  var b = wrap.querySelector('.on');
+  return b ? b.getAttribute('data-val') : '';
+}  
+
 function getBibCounts(entry) {
   var counts = {};
   var kontur = sel('kontur');
@@ -973,7 +980,7 @@ function bibInput() {
     list.appendChild(div);
   });
 }
-  
+
 function pointInput(m) {
   var input = $(m + '-point');
   var list = $(m + '-pointList');
