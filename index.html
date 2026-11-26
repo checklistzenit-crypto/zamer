@@ -833,31 +833,22 @@ function entryInput() {
 }
 
 // Считает частоту манишек для конкретной входной, объединяя данные с сервера и локальной очереди
-function sel(g) {
-  var wrap = document.querySelector('[data-group="' + g + '"]');
-  if (!wrap) return '';
-  var b = wrap.querySelector('.on');
-  return b ? b.getAttribute('data-val') : '';
-}  
-
 function getBibCounts(entry) {
   var counts = {};
   var kontur = sel('kontur');
   var osmotr = sel('osmotr');
   
   function addToCounts(bib, k, o, count) {
-    // Фильтр по тоглам: если выбрано — проверяем совпадение
     if (kontur && k !== kontur) return;
     if (osmotr && o !== osmotr) return;
     counts[bib] = (counts[bib] || 0) + count;
   }
   
-  // 1. Данные с сервера (новый формат с группировкой)
+  // 1. Данные с сервера
   if (dict.bibs && dict.bibs[entry]) {
     for (var bib in dict.bibs[entry]) {
       if (dict.bibs[entry].hasOwnProperty(bib)) {
         var combos = dict.bibs[entry][bib];
-        // Проверяем, объект это или число (на случай старого кеша)
         if (typeof combos === 'object' && combos !== null) {
           for (var combo in combos) {
             if (combos.hasOwnProperty(combo)) {
@@ -866,14 +857,13 @@ function getBibCounts(entry) {
             }
           }
         } else {
-          // Если пришло старое число — просто добавляем его
           addToCounts(bib, '', '', combos);
         }
       }
     }
   }
   
-  // 2. Локальная очередь (если нет сети)
+  // 2. Локальная очередь (несинхронизированные)
   var queue = getQ();
   queue.forEach(function(rec) {
     if (rec.mode === 'krs' && rec.entry === entry && rec.bib) {
@@ -883,6 +873,15 @@ function getBibCounts(entry) {
       if (bibStr) addToCounts(bibStr, k, o, 1);
     }
   });
+  
+  // 3. НОВОЕ: локальные манишки (гарантируют отображение после синка)
+  var local = getLocalBibs()[entry];
+  var day = nowStr(new Date()).split(' ')[0];
+  if (local && local.day === day) {
+    local.list.forEach(function(bib) {
+      if (!counts[bib]) counts[bib] = 1; // показываем хотя бы 1
+    });
+  }
   
   return counts;
 }
@@ -1107,6 +1106,13 @@ function pick(el) {
   }
 }
 
+function sel(g) {
+  var wrap = document.querySelector('[data-group="' + g + '"]');
+  if (!wrap) return '';
+  var b = wrap.querySelector('.on');
+  return b ? b.getAttribute('data-val') : '';
+}
+  
 /* ---------- экспорт ---------- */
 function exportRec() {
   if (dict.locked) return status('Записи заблокированы администратором');
