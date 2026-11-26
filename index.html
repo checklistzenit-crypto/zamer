@@ -272,6 +272,33 @@ input.err{background:#590d0b}
   border-bottom: 1px solid #000;
   color: #fff;
 }
+/* Стили для элементов списка с бейджем */
+.suggest-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background: #262626;
+  border-bottom: 1px solid #000;
+  color: #fff;
+  cursor: pointer;
+}
+.suggest-item:last-child {
+  border-bottom: none;
+}
+.suggest-bib {
+  font-size: 16px;
+}
+.suggest-count {
+  background: #444; /* Темно-серый фон */
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 12px; /* Круглая форма */
+  min-width: 24px;
+  text-align: center;
+}  
 /* Модальное окно */
 .modal-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -804,27 +831,42 @@ function entryInput() {
   $('entry').classList.toggle('err', isInvalid);
   $('entryHint').style.display = isInvalid ? 'block' : 'none';
 }
+
 function showBibs() {
   var entry = $('entry').value;
   var list = $('bibList');
-  list.innerHTML = '';
-
-  var all = bibListFor(entry);
-  if (all.length === 0) {
-    list.style.display = 'none'; // Скрываем, если пусто
+  list.innerHTML = ''; 
+  
+  if (!entry || !dict.bibs || !dict.bibs[entry]) {
+    list.style.display = 'none'; 
     return;
   }
 
-  list.style.display = 'block'; // Показываем
-  all.forEach(function(b) {
-    var div = document.createElement('div');
-    div.textContent = b;
-    div.onclick = function() {
-      $('bib').value = b;
-      list.style.display = 'none'; // Прячем после выбора
-    };
-    list.appendChild(div);
-  });
+  list.style.display = 'block'; 
+  var bibsObj = dict.bibs[entry];
+  
+  // Проходим по объекту манишек
+  for (var bib in bibsObj) {
+    if (bibsObj.hasOwnProperty(bib)) {
+      var count = bibsObj[bib];
+      var div = document.createElement('div');
+      div.className = 'suggest-item';
+      
+      div.innerHTML = `
+        <span class="suggest-bib">${bib}</span>
+        <span class="suggest-count">${count}</span>
+      `;
+      
+      div.onclick = function(bibVal) {
+        return function() {
+          $('bib').value = bibVal;
+          list.style.display = 'none';
+        };
+      }(bib);
+      
+      list.appendChild(div);
+    }
+  }
 }
   
 function bibInput() {
@@ -832,30 +874,42 @@ function bibInput() {
   var entry = $('entry').value;
   var list = $('bibList');
   list.innerHTML = '';
-
-  var all = bibListFor(entry);
-  if (!v || all.length === 0) {
+  
+  if (!v || !entry || !dict.bibs || !dict.bibs[entry]) {
     list.style.display = 'none';
     return;
   }
 
-  var matches = all.filter(function(b) {
-    return b.indexOf(v) !== -1;
-  });
-
+  var bibsObj = dict.bibs[entry];
+  var matches = [];
+  
+  // Фильтруем по введенному значению
+  for (var bib in bibsObj) {
+    if (bibsObj.hasOwnProperty(bib) && bib.indexOf(v) !== -1) {
+      matches.push({ bib: bib, count: bibsObj[bib] });
+    }
+  }
+  
   if (matches.length === 0) {
     list.style.display = 'none';
     return;
   }
 
   list.style.display = 'block';
-  matches.forEach(function(b) {
+  matches.forEach(function(item) {
     var div = document.createElement('div');
-    div.textContent = b;
+    div.className = 'suggest-item';
+    
+    div.innerHTML = `
+      <span class="suggest-bib">${item.bib}</span>
+      <span class="suggest-count">${item.count}</span>
+    `;
+    
     div.onclick = function() {
-      $('bib').value = b;
+      $('bib').value = item.bib;
       list.style.display = 'none';
     };
+    
     list.appendChild(div);
   });
 }
