@@ -205,14 +205,16 @@ input.err{background:#590d0b}
 
 /* Сетка для 6 кругов */
 .laps-container {
-  display: grid; /* Всегда grid, чтобы работали анимации */
+  display: grid; 
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  max-height: 0; /* Скрыто по умолчанию */
+  max-height: 0; 
   opacity: 0;
   overflow: hidden;
   margin: 0;
   transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+  position: relative;
+  z-index: 5;
 }
 
 .laps-container.active {
@@ -451,33 +453,30 @@ window.onerror = function (msg, src, line) {
   
 <!-- Контейнер для 6 кругов -->
 <div id="lapsContainer" class="laps-container">
-  <!-- Колонка 1 -->
   <div class="lap-item" id="lapBox1" ontouchstart="handleTouchStart(event)" ontouchend="handleLapTap(event, 0)" onclick="handleLapTap(event, 0)">
     <span class="lap-label" id="lapLabel1">Круг 1</span>
     <span id="lapDisp1" class="disp-lap">0:00.0</span>
     <span class="lap-icon" id="lapIcon1">⏸</span>
+  </div>
+  <div class="lap-item" id="lapBox2" ontouchstart="handleTouchStart(event)" ontouchend="handleLapTap(event, 1)" onclick="handleLapTap(event, 1)">
+    <span class="lap-label" id="lapLabel2">Круг 2</span>
+    <span id="lapDisp2" class="disp-lap">0:00.0</span>
+    <span class="lap-icon" id="lapIcon2">⏸</span>
   </div>
   <div class="lap-item" id="lapBox3" ontouchstart="handleTouchStart(event)" ontouchend="handleLapTap(event, 2)" onclick="handleLapTap(event, 2)">
     <span class="lap-label" id="lapLabel3">Круг 3</span>
     <span id="lapDisp3" class="disp-lap">0:00.0</span>
     <span class="lap-icon" id="lapIcon3">⏸</span>
   </div>
-  <div class="lap-item" id="lapBox5" ontouchstart="handleTouchStart(event)" ontouchend="handleLapTap(event, 4)" onclick="handleLapTap(event, 4)">
-    <span class="lap-label" id="lapLabel5">Круг 5</span>
-    <span id="lapDisp5" class="disp-lap">0:00.0</span>
-    <span class="lap-icon" id="lapIcon5">⏸</span>
-  </div>
-
-  <!-- Колонка 2 -->
-  <div class="lap-item" id="lapBox2" ontouchstart="handleTouchStart(event)" ontouchend="handleLapTap(event, 1)" onclick="handleLapTap(event, 1)">
-    <span class="lap-label" id="lapLabel2">Круг 2</span>
-    <span id="lapDisp2" class="disp-lap">0:00.0</span>
-    <span class="lap-icon" id="lapIcon2">⏸</span>
-  </div>
   <div class="lap-item" id="lapBox4" ontouchstart="handleTouchStart(event)" ontouchend="handleLapTap(event, 3)" onclick="handleLapTap(event, 3)">
     <span class="lap-label" id="lapLabel4">Круг 4</span>
     <span id="lapDisp4" class="disp-lap">0:00.0</span>
     <span class="lap-icon" id="lapIcon4">⏸</span>
+  </div>
+  <div class="lap-item" id="lapBox5" ontouchstart="handleTouchStart(event)" ontouchend="handleLapTap(event, 4)" onclick="handleLapTap(event, 4)">
+    <span class="lap-label" id="lapLabel5">Круг 5</span>
+    <span id="lapDisp5" class="disp-lap">0:00.0</span>
+    <span class="lap-icon" id="lapIcon5">⏸</span>
   </div>
   <div class="lap-item" id="lapBox6" ontouchstart="handleTouchStart(event)" ontouchend="handleLapTap(event, 5)" onclick="handleLapTap(event, 5)">
     <span class="lap-label" id="lapLabel6">Круг 6</span>
@@ -775,7 +774,7 @@ function setDisplays() {
   
   // 2. Обновление главного таймера
   var mainMs = getMainDurationMs(state);
-  var mainText = state.mainRun ? fmtMs(mainMs) : (state.mainFinal !== null ? fmtMs(state.mainFinal) : '0:00.00');
+  var mainText = state.mainRun ? fmtMs(mainMs) : (state.mainFinal !== null ? fmtMs(getMainDurationMs(state)) : '0:00.00');
   if ($('main').textContent !== mainText) $('main').textContent = mainText;
   
   if (state.mainRun && state.mainPaused) {
@@ -1064,8 +1063,12 @@ function getBibCounts(entry) {
   var osmotr = sel('osmotr');
   
   function addToCounts(bib, k, o, count) {
-    if (kontur && k !== kontur) return;
-    if (osmotr && o !== osmotr) return;
+    var nk = String(k || '').trim().toLowerCase();
+    var no = String(o || '').trim().toLowerCase();
+    var curK = kontur.toLowerCase();
+    var curO = osmotr.toLowerCase();
+    if (curK && nk !== curK) return;
+    if (curO && no !== curO) return;
     counts[bib] = (counts[bib] || 0) + count;
   }
   
