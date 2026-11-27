@@ -414,9 +414,9 @@ window.onerror = function (msg, src, line) {
 
 <!-- Верхние табы -->
 <div class="tabs">
-  <button class="tab on krs" id="tabKrs" onclick="switchMode('krs')">КРС</button>
-  <button class="tab zls" id="tabZls" onclick="switchMode('zls')">ЗЛС</button>
-  <button class="tab chl" id="tabChl" onclick="switchMode('chl')">ЧЛ</button>
+  <button class="tab on krs" id="tabKrs" onclick="handleTabClick('krs')">КРС</button>
+  <button class="tab zls" id="tabZls" onclick="handleTabClick('zls')">ЗЛС</button>
+  <button class="tab chl" id="tabChl" onclick="handleTabClick('chl')">ЧЛ</button>
 </div>
 
 <div id="lockBar">Записи заблокированы администратором</div>
@@ -772,6 +772,52 @@ function switchMode(m) {
   setDisplays(); 
 }
 
+var tabClickTimes = { krs: [], zls: [], chl: [] };
+function handleTabClick(m) {
+  var now = Date.now();
+  
+  // Если мы на другой вкладке — просто переключаемся
+  if (mode !== m) {
+    switchMode(m);
+    tabClickTimes[m] = [now]; // Сбрасываем счетчик
+    return;
+  }  
+  // Если мы уже на этой вкладке — считаем клики
+  tabClickTimes[m] = tabClickTimes[m].filter(function(t) { return now - t < 2000; });
+  tabClickTimes[m].push(now);
+  
+  if (tabClickTimes[m].length >= 3) {
+    tabClickTimes[m] = []; // Сбрасываем
+    openGoogleSheet(m);
+  }
+}
+
+function openGoogleSheet(m) {
+  if (!dict.sheetIds) {
+    return status('Подождите, загрузка данных...');
+  }
+
+  var KRS_SPREADSHEET = '1f4pvI4GhgRp_GF3apYZM-wLVZ15hmhmD0aGWHOzL5lk';
+  var KAT_SPREADSHEET = '1A3cW-3ZHxyP6xSX5DnzQSZt2kwI145Y8MRwjwS9Xoeo';
+
+  if (m === 'krs') {
+    var entry = $('entry').value;
+    if (!entry) return status('Сначала выберите «Номер входной»');
+    
+    var gid = dict.sheetIds[entry];
+    if (gid === undefined) return status('Лист для «' + entry + '» еще не создан');
+    
+    // Открываем таблицу КРС на нужном листе
+    window.open('https://docs.google.com/spreadsheets/d/' + KRS_SPREADSHEET + '/edit#gid=' + gid, '_blank');
+  } else {
+    var gidKat = dict.sheetIds['Замеры Кейтеринг'];
+    if (gidKat === undefined) return status('Лист «Замеры Кейтеринг» не найден');
+    
+    // Открываем таблицу Кейтеринга
+    window.open('https://docs.google.com/spreadsheets/d/' + KAT_SPREADSHEET + '/edit#gid=' + gidKat, '_blank');
+  }
+}
+  
 function resetAll(keepFields, targetMode) {
   if (!targetMode) targetMode = mode; // Если вкладка не указана, берем текущую
   
