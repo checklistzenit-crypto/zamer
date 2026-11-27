@@ -203,7 +203,7 @@ input.err{background:#590d0b}
   pointer-events: none;
 }
 
-/* Сетка для 4 кругов */
+/* Сетка для 6 кругов */
 .laps-container {
   display: grid; /* Всегда grid, чтобы работали анимации */
   grid-template-columns: 1fr 1fr;
@@ -242,16 +242,16 @@ input.err{background:#590d0b}
   font-size: 13px;
   color: #aaa;
 }
-/* Уменьшили шрифт на 2px (было 27px, стало 25px) */
+/* Таймеры кругов */
 .disp-lap { 
-  font-size: 25px; 
+  font-size: 28px; 
   text-align: right; 
   color: #fff; 
   font-variant-numeric: tabular-nums; 
   font-weight: 300; 
 }
 
-/* Уменьшаем главный таймер, если есть круги */
+/* Главный таймер, если есть круги */
 .disp.shrink { font-size: 45px; }
 
 /* Блокировка альбомного режима */
@@ -445,7 +445,11 @@ window.onerror = function (msg, src, line) {
 
 <div id="lockBar">Записи заблокированы администратором</div>
 
-<!-- Контейнер для 4 кругов -->
+<!-- Делаем главный таймер кликабельным для паузы -->
+<div id="main" class="disp" ontouchstart="handleTouchStart(event)" ontouchend="handleMainTap(event)" onclick="handleMainTap(event)">0:00.00</div>
+<div class="form-container">  
+  
+<!-- Контейнер для 6 кругов -->
 <div id="lapsContainer" class="laps-container">
   <!-- Колонка 1 -->
   <div class="lap-item" id="lapBox1" ontouchstart="handleTouchStart(event)" ontouchend="handleLapTap(event, 0)" onclick="handleLapTap(event, 0)">
@@ -481,12 +485,8 @@ window.onerror = function (msg, src, line) {
     <span class="lap-icon" id="lapIcon6">⏸</span>
   </div>
 </div>
-
-<!-- Делаем главный таймер кликабельным для паузы -->
-<div id="main" class="disp" ontouchstart="handleTouchStart(event)" ontouchend="handleMainTap(event)" onclick="handleMainTap(event)">0:00.00</div>
-<div class="form-container">
   
-  <!-- ================= ВКЛАДКА КРС ================= -->
+<!-- ================= ВКЛАДКА КРС ================= -->
   <div id="krsFields">
     <div class="grid-2">
       <div>
