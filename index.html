@@ -216,7 +216,7 @@ input.err{background:#590d0b}
 }
 
 .laps-container.active {
-  max-height: 100px; /* Раскрываем */
+  max-height: 140px; /* Раскрываем */
   opacity: 1;
   margin-top: 10px;
   margin-bottom: 10px;
@@ -444,8 +444,6 @@ window.onerror = function (msg, src, line) {
 </div>
 
 <div id="lockBar">Записи заблокированы администратором</div>
-
-<div id="main" class="disp">0:00.00</div>
 
 <!-- Контейнер для 4 кругов -->
 <div id="lapsContainer" class="laps-container">
@@ -698,7 +696,10 @@ function getLapDurationMs(lap) {
 }
 
 function getMainDurationMs(state) {
-  if (state.mainFinal !== null) return state.mainFinal - (state.mainAccumPause || 0);
+  if (state.mainFinal !== null) {
+    // Если таймер остановлен, mainFinal — это время остановки, а не длительность
+    return state.mainFinal - state.mainStart - (state.mainAccumPause || 0);
+  }
   var now = state.mainPaused ? state.mainPausedAt : Date.now();
   return now - state.mainStart - (state.mainAccumPause || 0);
 }
@@ -907,7 +908,17 @@ function stop() {
     activeLap.endLocal = nowStr(new Date());
   }
   
-  // ... (дальше логика 3х кликов СТОП без изменений)
+  state.stopClicks = state.stopClicks.filter(function (x) { return t - x < 3000; });
+  state.stopClicks.push(t);
+  if (state.stopClicks.length >= 3) {
+    state.stopClicks = [];
+    resetAll(false, mode);
+    return status('Форма сброшена');
+  }
+  
+  setDisplays();
+  dispRun(false); 
+}
 
 function switchMode(m) {
   if (m === mode) return;
@@ -1562,14 +1573,14 @@ function executeExport(modalLaps, isMultiLap) {
   var state = states[mode];
   var rec;
 
-  // --- НОВОЕ: Проверка пароля перед экспортом ---
+  // --- 1. Проверка пароля перед экспортом ---
   var savedPass = localStorage.getItem('auth_password');
   if (dict.dailyPassword && savedPass !== dict.dailyPassword) {
     checkAuthState(); // Показываем экран ввода
     return status('Сначала введите актуальный пароль');
   }
-  // ----------------------------------------------
   
+  // --- 2. Экспорт для вкладки КРС ---
   if (mode === 'krs') {
     var entry = $('entry').value, bib = $('bib').value;
     var kontur = sel('kontur'), osmotr = sel('osmotr');
@@ -1580,12 +1591,17 @@ function executeExport(modalLaps, isMultiLap) {
     if (!kontur) return status('Выберите тип контура');
     if (!osmotr) return status('Выберите тип осмотра');
     
+    // Считаем главное время с учетом пауз
+    var mainSec = Math.round(getMainDurationMs(state) / 1000);
+    
     rec = { mode: 'krs', entry: entry, kontur: kontur, osmotr: osmotr, bib: bib,
-            durSec: Math.round(state.mainFinal / 1000), note: $('noteK').value, startLocal: state.startLocal };
+            durSec: mainSec, note: $('noteK').value, startLocal: state.startLocal };
+            
     var q = getQ(); q.push(rec); saveQ(q);
-        addLocalBib(entry, bib);
+    addLocalBib(entry, bib);
+    
   } else {
-    // Если кругов 2 и больше (модалка)
+    // --- 3. Экспорт для ЗЛС и ЧЛ (с кругами) ---
     if (isMultiLap && state.laps.length >= 2) {
       var q = getQ();
       
@@ -1593,39 +1609,55 @@ function executeExport(modalLaps, isMultiLap) {
       for (let i = 0; i < state.laps.length - 1; i++) {
         let lap = state.laps[i];
         let m = modalLaps[i];
+        let lapSec = Math.round(getLapDurationMs(lap) / 1000); // <-- Учитываем паузы
+        
         q.push({
           mode: 'katering',
           is_lap_only: true,
-          point: $(mode + '-point').value, kassa: m.kassa || null,
-          print: m.print, issue: m.issue, note: m.note,
-          lapLocal: lap.startLocal, lapSec: Math.round((lap.end - lap.start) / 1000)
+          point: $(mode + '-point').value, 
+          kassa: m.kassa || null,
+          print: m.print, 
+          issue: m.issue, 
+          note: m.note,
+          lapLocal: lap.startLocal, 
+          lapSec: lapSec
         });
       }
       
       // Экспортируем последний круг (полный замер)
       let lastLap = state.laps[state.laps.length - 1];
       let lastM = modalLaps[modalLaps.length - 1];
+      let lastLapSec = Math.round(getLapDurationMs(lastLap) / 1000);
+      let mainSec = Math.round(getMainDurationMs(state) / 1000);
       
-      // ИСПРАВЛЕНИЕ: Проверяем, есть ли поле кассы на этой вкладке
       var lastKassa = mode === 'zls' ? lastM.kassa : null;
       var lastKassCount = mode === 'zls' ? ($(mode + '-kassCount').value || null) : null;
       
       q.push({
         mode: 'katering',
         is_lap_only: false,
-        point: $(mode + '-point').value, kassa: lastKassa,
+        point: $(mode + '-point').value, 
+        kassa: lastKassa,
         kassCount: lastKassCount, 
-        staff: $(mode + '-staff').value || null, queue: $(mode + '-queue').value || null,
-        print: lastM.print, issue: lastM.issue, note: lastM.note,
-        hadLap: true, startLocal: state.startLocal, lapLocal: lastLap.startLocal,
-        mainSec: Math.round(state.mainFinal / 1000), lapSec: Math.round((lastLap.end - lastLap.start) / 1000)
+        staff: $(mode + '-staff').value || null, 
+        queue: $(mode + '-queue').value || null,
+        print: lastM.print, 
+        issue: lastM.issue, 
+        note: lastM.note,
+        hadLap: true, 
+        startLocal: state.startLocal, 
+        lapLocal: lastLap.startLocal,
+        mainSec: mainSec, 
+        lapSec: lastLapSec
       });
       saveQ(q);
+      
     } else {
-      // Обычный экспорт (0 или 1 круг)
+      // --- 4. Обычный экспорт (0 или 1 круг) ---
       var hadLap = state.laps.length > 0;
-      var lapSec = hadLap ? Math.round((state.laps[0].end - state.laps[0].start) / 1000) : null;
+      var lapSec = hadLap ? Math.round(getLapDurationMs(state.laps[0]) / 1000) : null;
       var lapLocal = hadLap ? state.laps[0].startLocal : null;
+      var mainSec = Math.round(getMainDurationMs(state) / 1000);
       
       var kassa = mode === 'zls' ? $(mode + '-kassa').value : null;
       var kassCount = mode === 'zls' ? $(mode + '-kassCount').value : null;
@@ -1638,8 +1670,12 @@ function executeExport(modalLaps, isMultiLap) {
               queue: $(mode + '-queue').value || null,
               print: $(mode + '-chkPrint').classList.contains('on'), 
               issue: $(mode + '-chkIssue').classList.contains('on'),
-              note: $(mode + '-noteKt').value, hadLap: hadLap, startLocal: state.startLocal, lapLocal: lapLocal,
-              mainSec: Math.round(state.mainFinal / 1000), lapSec: lapSec };
+              note: $(mode + '-noteKt').value, 
+              hadLap: hadLap, 
+              startLocal: state.startLocal, 
+              lapLocal: lapLocal,
+              mainSec: mainSec, 
+              lapSec: lapSec };
               
       var q = getQ(); q.push(rec); saveQ(q);
     }
